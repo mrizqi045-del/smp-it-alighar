@@ -1,0 +1,2417 @@
+<!DOCTYPE html>
+<html lang="id" x-data="App()" x-init="init()">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMP ISLAM TERPADU ALIGHAR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .fade-in { animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .spinner { border:3px solid #e5e7eb; border-top-color:#1a73e8; border-radius:50%; width:24px; height:24px; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    /* Waktu sholat card aktif */
+    .sholat-btn-sholat    { @apply bg-green-500 text-white border-green-500; }
+    .sholat-btn-tidak     { @apply bg-red-500 text-white border-red-500; }
+    .sholat-btn-haid      { @apply bg-purple-500 text-white border-purple-500; }
+    .sholat-btn-belum     { @apply bg-gray-100 text-gray-500 border-gray-300; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="toast.show" x-transition
+  class="fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm max-w-xs"
+  :class="toast.type==='ok' ? 'bg-green-600' : 'bg-red-600'"
+  @click="toast.show=false">
+  <span x-text="toast.msg"></span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOADING OVERLAY
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="loading" class="fixed inset-0 bg-white/80 z-40 flex items-center justify-center">
+  <div class="spinner"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HALAMAN LOGIN
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="page==='login'" class="min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm fade-in">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800">SMP ISLAM TERPADU ALIGHAR</h1>
+    </div>
+    <form @submit.prevent="doLogin">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+        <input type="text" x-model="loginForm.username" required autocomplete="username"
+          class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Masukkan username" />
+      </div>
+      <div class="mb-6 relative">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <input :type="showPass ? 'text' : 'password'" x-model="loginForm.password" required autocomplete="current-password"
+          class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+          placeholder="Masukkan password" />
+        <button type="button" @click="showPass=!showPass"
+          class="absolute right-3 top-9 text-gray-400 hover:text-gray-600">
+          <svg x-show="!showPass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          <svg x-show="showPass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21"/>
+          </svg>
+        </button>
+      </div>
+      <button type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition text-sm">
+        Masuk
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LAYOUT UTAMA (setelah login)
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="page!=='login'" class="flex flex-col min-h-screen">
+
+  <!-- ── TOP NAV ──────────────────────────────────────────── -->
+  <nav class="bg-blue-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Mobile hamburger -->
+        <button @click="sidebarOpen=!sidebarOpen" class="lg:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <span class="font-bold text-lg">SMP ISLAM TERPADU ALIGHAR</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm hidden sm:block" x-text="user.nama"></span>
+        <span class="text-xs bg-blue-500 px-2 py-0.5 rounded-full" x-text="labelRole(user.role)"></span>
+        <button @click="doLogout" class="text-sm bg-blue-800 hover:bg-blue-900 px-3 py-1.5 rounded-lg transition">
+          Keluar
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="flex flex-1 max-w-6xl mx-auto w-full">
+
+    <!-- ── SIDEBAR ──────────────────────────────────────────── -->
+    <aside class="bg-white border-r border-gray-200 w-56 flex-shrink-0 hidden lg:block">
+      <nav class="p-4 space-y-1">
+        <template x-for="item in navItems()" :key="item.page">
+          <button @click="navigate(item.page)"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"
+            :class="page===item.page ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
+            <span x-html="item.icon" class="w-5 h-5 flex-shrink-0"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+    </aside>
+
+    <!-- Mobile sidebar overlay -->
+    <div x-cloak x-show="sidebarOpen" @click="sidebarOpen=false"
+      class="fixed inset-0 bg-black/40 z-20 lg:hidden"></div>
+    <aside x-cloak x-show="sidebarOpen" class="fixed left-0 top-0 h-full w-56 bg-white shadow-xl z-30 lg:hidden pt-16">
+      <nav class="p-4 space-y-1">
+        <template x-for="item in navItems()" :key="item.page">
+          <button @click="navigate(item.page); sidebarOpen=false"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"
+            :class="page===item.page ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
+            <span x-html="item.icon" class="w-5 h-5 flex-shrink-0"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+    </aside>
+
+    <!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+    <main class="flex-1 p-4 sm:p-6 overflow-auto">
+
+      <!-- ── DASHBOARD SISWA ─────────────────────────────────── -->
+      <div x-cloak x-show="page==='dashboard-siswa'" class="fade-in">
+        <!-- PageDashboardSiswa.html — Riwayat Sholat Minggu Ini -->
+<div x-data="PageDashSiswa()" 
+     @dashboard-siswa-updated.window="onDataUpdated($event.detail)"
+     x-init="init()"
+     x-effect="if (window.app && window.app.page === 'dashboard-siswa') { onPageActive(); }">
+
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-xl font-bold text-gray-800">Riwayat Sholat Saya</h2>
+    <div class="flex items-center gap-2">
+      <button @click="minggu--; load()" class="p-2 rounded-lg border hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <span class="text-sm font-medium text-gray-600 min-w-[140px] text-center"
+        x-text="rangeLabel || 'Memuat...'"></span>
+      <button @click="if(minggu<0){minggu++; load();}" :disabled="minggu===0"
+        class="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div x-show="loading || (!rekap && window.app && window.app.loading)" class="py-16 text-center text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+    <div class="inline-block animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mb-3"></div>
+    <p class="text-sm font-medium">Memuat riwayat sholat minggu berjalan...</p>
+  </div>
+
+  <!-- Ringkasan -->
+  <template x-if="rekap && !loading">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-green-600" x-text="rekap.total_tepat !== undefined ? rekap.total_tepat : rekap.total_sholat"></div>
+        <div class="text-xs text-green-700 mt-1">✅ Tepat Waktu</div>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-amber-600" x-text="rekap.total_terlambat || 0"></div>
+        <div class="text-xs text-amber-700 mt-1">⚠️ Terlambat</div>
+      </div>
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-red-600" x-text="rekap.total_tidak"></div>
+        <div class="text-xs text-red-700 mt-1">❌ Tidak Sholat</div>
+      </div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600" x-text="rekap.persen + '%'"></div>
+        <div class="text-xs text-blue-700 mt-1">Kepatuhan</div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Tabel detail hari -->
+  <template x-if="rekap && rekap.detail.length > 0 && !loading">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">Hari</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Subuh</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Dzuhur</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Ashar</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Maghrib</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Isya</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="hari in rekap.detail" :key="hari.tanggal">
+              <tr class="border-b border-gray-100 hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-700 whitespace-nowrap"
+                  x-text="window.app ? window.app.formatTanggalPendek(hari.tanggal) : hari.tanggal"></td>
+                <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+                  <td class="text-center px-3 py-3">
+                    <template x-if="hari.waktu[w] !== undefined">
+                      <div class="flex flex-col items-center gap-0.5">
+                        <span class="text-base leading-none" x-text="statusIcon(hari.waktu[w])"></span>
+                        <span class="text-[10px] font-mono leading-none"
+                          :class="{
+                            'text-green-600': getStatus(hari.waktu[w]) === 'sholat' && !isTerlambat(hari.waktu[w]),
+                            'text-amber-600 font-bold': getStatus(hari.waktu[w]) === 'sholat' && isTerlambat(hari.waktu[w]),
+                            'text-red-500':   getStatus(hari.waktu[w]) === 'tidak_sholat',
+                            'text-purple-600':getStatus(hari.waktu[w]) === 'haid',
+                            'text-gray-400':  getStatus(hari.waktu[w]) === 'belum'
+                          }"
+                          x-text="getJam(hari.waktu[w])">
+                        </span>
+                        <template x-if="isTerlambat(hari.waktu[w])">
+                          <span class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 rounded leading-tight mt-0.5">Terlambat</span>
+                        </template>
+                      </div>
+                    </template>
+                    <template x-if="hari.waktu[w] === undefined">
+                      <span class="text-gray-200 text-xs">·</span>
+                    </template>
+                  </td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageDashSiswa() {
+  return {
+    minggu: 0,
+    rekap:  null,
+    rangeLabel: '',
+    loading: false,
+
+    async init() {
+      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa') {
+        this.onDataUpdated(window.app.dashboardData);
+      }
+      if (window.app && window.app.token) {
+        await this.load();
+      }
+    },
+
+    onPageActive() {
+      // Dipanggil otomatis tiap kali halaman ini dibuka
+      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa' && !this.rekap) {
+        this.onDataUpdated(window.app.dashboardData);
+      } else if (!this.rekap && !this.loading && window.app && window.app.token) {
+        this.load();
+      }
+    },
+
+    onDataUpdated(res) {
+      if (!res) return;
+      this.rekap      = res.rekap || null;
+      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+    },
+
+    async load() {
+      if (!window.app || !window.app.token) return;
+      this.loading = true;
+      const res = await window.app.api('getDashboard', { minggu: this.minggu });
+      this.loading = false;
+      if (res.ok) {
+        this.onDataUpdated(res);
+      } else {
+        window.app.showToast(res.msg, 'err');
+      }
+    },
+
+    getStatus(s) {
+      if (!s) return 'belum';
+      return (typeof s === 'object') ? (s.status || 'belum') : s;
+    },
+
+    getJam(s) {
+      if (!s || typeof s !== 'object') return '—';
+      return s.jam || '—';
+    },
+
+    isTerlambat(s) {
+      if (!s || typeof s !== 'object') return false;
+      return Boolean(s.terlambat);
+    },
+
+    statusIcon(s) {
+      const v = this.getStatus(s);
+      if (v === 'sholat') {
+        return this.isTerlambat(s) ? '⚠️' : '✅';
+      }
+      if (v === 'tidak_sholat') return '❌';
+      if (v === 'haid')         return '🌙';
+      return '—';
+    }
+  };
+}
+</script>
+
+      </div>
+
+      <!-- ── LAPOR SHOLAT ────────────────────────────────────── -->
+      <div x-cloak x-show="page==='lapor'" class="fade-in">
+        <!-- PageLapor.html — Form Lapor Sholat Siswa -->
+<div x-data="PageLapor()" 
+     @lapor-updated.window="data = $event.detail"
+     x-init="init()">
+
+  <div class="flex items-center justify-between mb-2">
+    <div>
+      <h2 class="text-xl font-bold text-gray-800">Laporan Sholat Hari Ini</h2>
+      <p class="text-sm text-gray-500" x-text="data ? formatTanggal(data.tanggal) : ''"></p>
+    </div>
+    <button @click="refreshData()" title="Muat ulang form"
+      class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition border border-gray-200">
+      <svg class="w-4 h-4" :class="loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Header Info: Tipe Hari, Lokasi, dan Jam Sekarang -->
+  <template x-if="data">
+    <div class="flex flex-wrap items-center gap-2 mb-6">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+        :class="data.tipe_hari === 'hari_libur' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'">
+        <span x-text="data.tipe_hari === 'hari_libur' ? '🏖️ Hari Libur — semua waktu dilaporkan' : '🏫 Hari Sekolah — sesuai jadwal'"></span>
+      </span>
+
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+        📍 <span x-text="data.nama_kota || 'SMP ISLAM TERPADU ALIGHAR'"></span>
+      </span>
+
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        🕒 Jam Saat Ini: <span class="font-bold" x-text="data.now_time"></span>
+      </span>
+    </div>
+  </template>
+
+  <!-- Form sholat -->
+  <template x-if="data && data.form && data.form.length > 0">
+    <div class="space-y-4">
+      <template x-for="item in data.form" :key="item.waktu">
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm transition"
+          :class="item.sudah_lapor ? 'border-l-4 border-l-green-500' : (item.can_lapor ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-gray-300 opacity-90')">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-gray-800 text-lg" x-text="item.label"></h3>
+                <span class="text-xs px-2 py-0.5 rounded font-mono bg-gray-100 text-gray-600"
+                  x-text="item.jam_mulai ? (item.jam_mulai + ' - ' + item.jam_selesai) : ''"></span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5" x-text="waktuDesc(item.waktu)"></p>
+            </div>
+
+            <!-- Status badge jika sudah lapor -->
+            <template x-if="item.sudah_lapor">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                  :class="{
+                    'bg-amber-100 text-amber-800 border border-amber-300': item.status === 'sholat' && item.terlambat,
+                    'bg-green-100 text-green-700 border border-green-200':  item.status === 'sholat' && !item.terlambat,
+                    'bg-red-100 text-red-700 border border-red-200':      item.status === 'tidak_sholat',
+                    'bg-purple-100 text-purple-700 border border-purple-200': item.status === 'haid'
+                  }"
+                  x-text="item.status === 'sholat' ? (item.terlambat ? '⚠️ Sholat (Terlambat)' : '✅ Sholat (Tepat Waktu)') : labelStatus(item.status)">
+                </span>
+                <span class="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full font-mono"
+                  x-show="item.dilaporkan_at" x-text="'Pukul ' + item.dilaporkan_at"></span>
+              </div>
+            </template>
+          </div>
+
+          <!-- KONDISI 1: SUDAH LAPOR (TERKUNCI, TIDAK BISA DIEDIT KEMBALI) -->
+          <template x-if="item.sudah_lapor">
+            <div class="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-xs text-gray-600">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🔒</span>
+                <span>Laporan telah tercatat <strong :class="item.terlambat ? 'text-amber-700' : 'text-green-700'" x-text="item.status === 'sholat' ? (item.terlambat ? '(Sholat - Terlambat > 30 Menit)' : '(Sholat - Tepat Waktu)') : ('(' + labelStatus(item.status) + ')')"></strong> pada pukul <strong class="font-mono text-gray-800" x-text="item.dilaporkan_at || '-'"></strong> dan <span class="text-gray-800 font-medium">terkunci (tidak dapat diubah)</span>.</span>
+              </div>
+              <span class="font-semibold" :class="item.terlambat ? 'text-amber-600' : 'text-green-600'" x-text="item.terlambat ? 'Terlambat' : 'Selesai'"></span>
+            </div>
+          </template>
+
+          <!-- KONDISI 2: BELUM LAPOR TAPI BELUM MASUK WAKTU -->
+          <template x-if="!item.sudah_lapor && item.window_status === 'belum_mulai'">
+            <div>
+              <div class="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-xs text-amber-800">
+                <svg class="w-4 h-4 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Belum masuk waktu sholat. Pelaporan baru dibuka pada pukul <strong x-text="item.jam_mulai"></strong>.</span>
+              </div>
+              <div class="flex gap-2.5 opacity-40 cursor-not-allowed">
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">✅ Sholat</button>
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">❌ Tidak Sholat</button>
+                <template x-if="item.boleh_haid">
+                  <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">🌙 Haid</button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- KONDISI 3: BELUM LAPOR & WAKTU SHOLAT AKTIF SEDANG BERLANGSUNG -->
+          <template x-if="!item.sudah_lapor && item.window_status === 'aktif'">
+            <div>
+              <div class="mb-3 p-2.5 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-xs text-blue-800">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                  <span>Waktu pelaporan dibuka! Batas akhir pelaporan sebelum masuk waktu sholat berikutnya (pukul <strong x-text="item.jam_selesai"></strong>).</span>
+                </div>
+              </div>
+              <!-- Tombol laporan aktif -->
+              <div class="flex gap-2.5 flex-wrap">
+                <button @click="lapor(item.waktu, 'sholat')"
+                  class="flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition bg-white text-green-600 border-green-300 hover:bg-green-500 hover:text-white shadow-sm">
+                  ✅ Sholat
+                </button>
+                <button @click="lapor(item.waktu, 'tidak_sholat')"
+                  class="flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition bg-white text-red-600 border-red-300 hover:bg-red-500 hover:text-white shadow-sm">
+                  ❌ Tidak Sholat
+                </button>
+                <template x-if="item.boleh_haid">
+                  <button @click="lapor(item.waktu, 'haid')"
+                    class="flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition bg-white text-purple-600 border-purple-300 hover:bg-purple-500 hover:text-white shadow-sm">
+                    🌙 Haid
+                  </button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- KONDISI 4: BELUM LAPOR DAN SUDAH LEWAT WAKTU -->
+          <template x-if="!item.sudah_lapor && item.window_status === 'lewat'">
+            <div>
+              <div class="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800">
+                <svg class="w-4 h-4 flex-shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span>Waktu pelaporan sudah berakhir (batas s/d pukul <strong x-text="item.jam_selesai"></strong>). Anda tidak dapat melaporkan sholat ini lagi.</span>
+              </div>
+              <div class="flex gap-2.5 opacity-30 cursor-not-allowed">
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">✅ Sholat</button>
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">❌ Tidak Sholat</button>
+                <template x-if="item.boleh_haid">
+                  <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">🌙 Haid</button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <template x-if="data && data.form && data.form.length === 0">
+    <div class="text-center py-16 text-gray-400 bg-white rounded-xl border border-gray-200">
+      <p class="text-5xl mb-4">🕌</p>
+      <p class="font-medium">Tidak ada waktu sholat yang perlu dilaporkan hari ini.</p>
+    </div>
+  </template>
+
+  <template x-if="!data">
+    <div class="text-center py-16 bg-white rounded-xl border border-gray-200">
+      <div class="spinner mx-auto mb-3"></div>
+      <p class="text-sm text-gray-500">Memuat form sholat hari ini...</p>
+    </div>
+  </template>
+</div>
+
+<script>
+function PageLapor() {
+  return {
+    data: null,
+    loading: false,
+
+    async init() {
+      if (window.app && window.app.laporData) {
+        this.data = window.app.laporData;
+      }
+      if (window.app) {
+        await window.app.loadLapor();
+      }
+    },
+
+    async refreshData() {
+      if (!window.app) return;
+      this.loading = true;
+      await window.app.loadLapor();
+      this.loading = false;
+    },
+
+    async lapor(waktu, status) {
+      if (!window.app) return;
+      await window.app.kirimLaporan(waktu, status);
+      if (window.app.laporData) {
+        this.data = window.app.laporData;
+      }
+    },
+
+    labelStatus(s) {
+      if (s === 'sholat')       return '✅ Sholat';
+      if (s === 'tidak_sholat') return '❌ Tidak Sholat';
+      if (s === 'haid')         return '🌙 Sedang Haid';
+      return '—';
+    },
+
+    formatTanggal(str) {
+      if (!str) return '';
+      const d = new Date(str);
+      return d.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    },
+
+    waktuDesc(w) {
+      const map = {
+        subuh:   'Mulai masuk Subuh s/d Dzuhur',
+        dzuhur:  'Mulai masuk Dzuhur s/d Ashar',
+        ashar:   'Mulai masuk Ashar s/d Maghrib',
+        maghrib: 'Mulai masuk Maghrib s/d Isya',
+        isya:    'Mulai masuk Isya s/d Subuh esok hari'
+      };
+      return map[w] || '';
+    }
+  };
+}
+</script>
+
+      </div>
+
+      <!-- ── DASHBOARD WALIKELAS ─────────────────────────────── -->
+      <div x-cloak x-show="page==='dashboard-walikelas'" class="fade-in">
+        <!-- PageDashboardWalikelas.html — Rekap Mingguan Kelas -->
+<div x-data="PageDashWalikelas()" 
+     @dashboard-walikelas-updated.window="onDataUpdated($event.detail)"
+     x-init="init()"
+     x-effect="if (window.app && window.app.page === 'dashboard-walikelas') { onPageActive(); }">
+
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div>
+      <h2 class="text-xl font-bold text-gray-800">Rekap Sholat Kelas</h2>
+      <p class="text-sm text-gray-500" x-text="namaKelas"></p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button @click="minggu--; load()" class="p-2 rounded-lg border hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <span class="text-sm font-medium text-gray-600 min-w-[160px] text-center" x-text="rangeLabel || 'Memuat...'"></span>
+      <button @click="if(minggu<0){minggu++; load();}" :disabled="minggu===0"
+        class="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Summary cards -->
+  <template x-if="summary">
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+      <div class="bg-gray-50 border rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-gray-700" x-text="summary.total_siswa"></div>
+        <div class="text-xs text-gray-500 mt-1">Total Siswa</div>
+      </div>
+      <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-green-600" x-text="summary.total_sholat"></div>
+        <div class="text-xs text-green-700 mt-1">✅ Sholat</div>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-amber-600" x-text="summary.total_terlambat || 0"></div>
+        <div class="text-xs text-amber-700 mt-1">⚠️ Terlambat</div>
+      </div>
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-red-600" x-text="summary.total_tidak"></div>
+        <div class="text-xs text-red-700 mt-1">❌ Tidak Sholat</div>
+      </div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600" x-text="summary.persen + '%'"></div>
+        <div class="text-xs text-blue-700 mt-1">Kepatuhan</div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Tabel siswa -->
+  <template x-if="siswaList.length > 0">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600 min-w-[140px]">Nama Siswa</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">✅</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">⚠️ Terlambat</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">❌</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">🌙</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">%</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Detail</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="s in siswaList" :key="s.id">
+              <tr class="border-b border-gray-100"
+                :class="s.rekap.total_tidak >= 5 ? 'bg-red-50' : 'hover:bg-gray-50'">
+                <td class="px-4 py-3 font-medium text-gray-800">
+                  <span x-text="s.nama"></span>
+                  <span x-show="s.jenis_kelamin==='P'" class="ml-1 text-xs text-purple-500">(P)</span>
+                </td>
+                <td class="text-center px-3 py-3 text-green-600 font-semibold" x-text="s.rekap.total_sholat"></td>
+                <td class="text-center px-3 py-3 text-amber-600 font-semibold" x-text="s.rekap.total_terlambat || 0"></td>
+                <td class="text-center px-3 py-3 text-red-600 font-semibold" x-text="s.rekap.total_tidak"></td>
+                <td class="text-center px-3 py-3 text-purple-600 font-semibold" x-text="s.rekap.total_haid || '—'"></td>
+                <td class="text-center px-3 py-3">
+                  <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                    :class="s.rekap.persen >= 80 ? 'bg-green-100 text-green-700' :
+                            s.rekap.persen >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                                   'bg-red-100 text-red-700'"
+                    x-text="s.rekap.persen + '%'">
+                  </span>
+                </td>
+                <td class="text-center px-3 py-3">
+                  <button @click="showDetail(s)"
+                    class="text-blue-600 hover:text-blue-800 text-xs underline font-semibold">Lihat</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="siswaList.length === 0 && !(window.app && window.app.loading)">
+    <div class="text-center py-12 text-gray-400">
+      <p class="text-4xl mb-3">📋</p>
+      <p>Belum ada siswa di kelas ini.</p>
+    </div>
+  </template>
+
+  <!-- Modal Detail Siswa -->
+  <template x-if="detailSiswa">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="detailSiswa=null">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-auto">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+          <div>
+            <h3 class="font-bold text-lg" x-text="detailSiswa.nama"></h3>
+            <p class="text-sm text-gray-500" x-text="rangeLabel"></p>
+          </div>
+          <button @click="detailSiswa=null" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="text-left px-3 py-2 font-semibold text-gray-600">Hari</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Subuh</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Dzuhur</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Ashar</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Maghrib</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Isya</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="hari in detailSiswa.rekap.detail" :key="hari.tanggal">
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="px-3 py-2.5 text-gray-700 font-medium whitespace-nowrap"
+                    x-text="window.app ? window.app.formatTanggalPendek(hari.tanggal) : hari.tanggal"></td>
+                  <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+                    <td class="text-center px-2 py-2.5">
+                      <!-- Slot waktu ada dalam setting hari ini -->
+                      <template x-if="hari.waktu[w] !== undefined">
+                        <div class="flex flex-col items-center gap-0.5">
+                          <span class="text-base leading-none" x-text="statusIcon(hari.waktu[w])"></span>
+                          <span class="text-[10px] font-mono leading-none"
+                            :class="{
+                              'text-green-600': hari.waktu[w].status === 'sholat' && !hari.waktu[w].terlambat,
+                              'text-amber-600 font-bold': hari.waktu[w].status === 'sholat' && hari.waktu[w].terlambat,
+                              'text-red-500':   hari.waktu[w].status === 'tidak_sholat',
+                              'text-purple-600':hari.waktu[w].status === 'haid',
+                              'text-gray-400':  hari.waktu[w].status === 'belum'
+                            }"
+                            x-text="hari.waktu[w].jam || '—'">
+                          </span>
+                          <template x-if="hari.waktu[w].terlambat">
+                            <span class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 rounded leading-tight mt-0.5">Terlambat</span>
+                          </template>
+                        </div>
+                      </template>
+                      <!-- Slot waktu tidak wajib hari itu -->
+                      <template x-if="hari.waktu[w] === undefined">
+                        <span class="text-gray-200 text-xs">·</span>
+                      </template>
+                    </td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <p class="text-[11px] text-gray-400 mt-3">Jam pelaporan menggunakan zona waktu sekolah. "—" = belum lapor.</p>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageDashWalikelas() {
+  return {
+    minggu: 0,
+    namaKelas: '',
+    rangeLabel: '',
+    siswaList: [],
+    summary: null,
+    detailSiswa: null,
+
+    async init() {
+      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'walikelas') {
+        this.onDataUpdated(window.app.dashboardData);
+      }
+      if (window.app && window.app.token) {
+        await this.load();
+      }
+    },
+
+    onPageActive() {
+      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'walikelas' && this.siswaList.length === 0) {
+        this.onDataUpdated(window.app.dashboardData);
+      } else if (this.siswaList.length === 0 && window.app && window.app.token) {
+        this.load();
+      }
+    },
+
+    onDataUpdated(res) {
+      if (!res) return;
+      this.namaKelas  = res.kelas ? res.kelas.nama_kelas : '';
+      this.siswaList  = res.siswa || [];
+      this.summary    = res.summary || null;
+      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+    },
+
+    async load() {
+      if (!window.app || !window.app.token) return;
+      const res = await window.app.api('getDashboard', { minggu: this.minggu });
+      if (res.ok) {
+        this.onDataUpdated(res);
+      } else {
+        window.app.showToast(res.msg, 'err');
+      }
+    },
+
+    showDetail(s) {
+      this.detailSiswa = s;
+    },
+
+    statusIcon(s) {
+      const v = (typeof s === 'object' && s !== null) ? s.status : s;
+      const t = (typeof s === 'object' && s !== null) ? s.terlambat : false;
+      if (v === 'sholat')       return t ? '⚠️' : '✅';
+      if (v === 'tidak_sholat') return '❌';
+      if (v === 'haid')         return '🌙';
+      return '—';
+    }
+  };
+}
+</script>
+
+      </div>
+
+      <!-- ── DASHBOARD ADMIN ────────────────────────────────── -->
+      <div x-cloak x-show="page==='dashboard-admin'" class="fade-in">
+        <!-- PageDashboardAdmin.html — Dashboard Semua Kelas (Admin/Kepsek/Superadmin) -->
+<div x-data="PageDashAdmin()" 
+     @dashboard-admin-updated.window="onDataUpdated($event.detail)"
+     x-init="init()"
+     x-effect="if (window.app && window.app.page === 'dashboard-admin') { onPageActive(); }">
+
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <h2 class="text-xl font-bold text-gray-800">Dashboard Kepatuhan Sholat</h2>
+    <div class="flex items-center gap-2">
+      <button @click="minggu--; load()" class="p-2 rounded-lg border hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <span class="text-sm font-medium text-gray-600 min-w-[160px] text-center" x-text="rangeLabel || 'Memuat...'"></span>
+      <button @click="if(minggu<0){minggu++; load();}" :disabled="minggu===0"
+        class="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Rekap semua kelas -->
+  <template x-if="kelasList.length > 0">
+    <div class="space-y-4">
+      <template x-for="k in kelasList" :key="k.kelas.id">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <!-- Header kelas -->
+          <div class="px-5 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-gray-800" x-text="'Kelas ' + k.kelas.nama_kelas"></h3>
+              <p class="text-xs text-gray-500"
+                x-text="k.summary.total_siswa + ' siswa'"></p>
+            </div>
+            <div class="flex items-center gap-4">
+              <!-- Mini stats -->
+              <div class="flex gap-3 text-sm">
+                <span class="text-green-600 font-semibold" x-text="'✅ ' + k.summary.total_sholat"></span>
+                <span class="text-amber-600 font-semibold" x-text="'⚠️ ' + (k.summary.total_terlambat || 0)"></span>
+                <span class="text-red-600 font-semibold"   x-text="'❌ ' + k.summary.total_tidak"></span>
+                <span x-show="k.summary.total_haid > 0"
+                  class="text-purple-600 font-semibold"    x-text="'🌙 ' + k.summary.total_haid"></span>
+              </div>
+              <!-- Persen badge -->
+              <span class="px-3 py-1 rounded-full text-sm font-bold"
+                :class="k.summary.persen >= 80 ? 'bg-green-100 text-green-700' :
+                        k.summary.persen >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                                 'bg-red-100 text-red-700'"
+                x-text="k.summary.persen + '%'">
+              </span>
+              <!-- Tombol detail kelas -->
+              <button @click="lihatDetailKelas(k.kelas.id)"
+                class="text-sm text-blue-600 hover:text-blue-800 font-semibold underline">Detail Kelas</button>
+            </div>
+          </div>
+
+          <!-- Progress bar -->
+          <div class="px-5 py-3">
+            <div class="w-full bg-gray-100 rounded-full h-2">
+              <div class="h-2 rounded-full transition-all"
+                :style="'width:' + k.summary.persen + '%'"
+                :class="k.summary.persen >= 80 ? 'bg-green-500' :
+                        k.summary.persen >= 50 ? 'bg-yellow-500' : 'bg-red-500'">
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <template x-if="kelasList.length === 0 && !(window.app && window.app.loading)">
+    <div class="text-center py-16 text-gray-400">
+      <p class="text-5xl mb-3">🏫</p>
+      <p>Belum ada data kelas.</p>
+    </div>
+  </template>
+
+  <!-- Modal Detail Kelas (Daftar Siswa) -->
+  <template x-if="detailKelas">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="detailKelas=null">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-auto">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+          <div>
+            <h3 class="font-bold text-lg" x-text="'Kelas ' + detailKelas.kelas.nama_kelas"></h3>
+            <p class="text-sm text-gray-500" x-text="rangeLabel"></p>
+          </div>
+          <button @click="detailKelas=null" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Summary cards kelas -->
+        <template x-if="detailKelas.summary">
+          <div class="p-6 pb-2 grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div class="bg-gray-50 border rounded-xl p-3 text-center">
+              <div class="text-xl font-bold text-gray-700" x-text="detailKelas.summary.total_siswa"></div>
+              <div class="text-xs text-gray-500 mt-0.5">Total Siswa</div>
+            </div>
+            <div class="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+              <div class="text-xl font-bold text-green-600" x-text="detailKelas.summary.total_sholat"></div>
+              <div class="text-xs text-green-700 mt-0.5">✅ Sholat</div>
+            </div>
+            <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
+              <div class="text-xl font-bold text-amber-600" x-text="detailKelas.summary.total_terlambat || 0"></div>
+              <div class="text-xs text-amber-700 mt-0.5">⚠️ Terlambat</div>
+            </div>
+            <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+              <div class="text-xl font-bold text-red-600" x-text="detailKelas.summary.total_tidak"></div>
+              <div class="text-xs text-red-700 mt-0.5">❌ Tidak Sholat</div>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+              <div class="text-xl font-bold text-blue-600" x-text="detailKelas.summary.persen + '%'"></div>
+              <div class="text-xs text-blue-700 mt-0.5">Kepatuhan</div>
+            </div>
+          </div>
+        </template>
+
+        <div class="p-6 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="text-left px-4 py-2 font-semibold text-gray-600">Nama Siswa</th>
+                <th class="text-center px-3 py-2">✅</th>
+                <th class="text-center px-3 py-2">⚠️ Terlambat</th>
+                <th class="text-center px-3 py-2">❌</th>
+                <th class="text-center px-3 py-2">🌙</th>
+                <th class="text-center px-3 py-2">%</th>
+                <th class="text-center px-3 py-2 font-semibold text-gray-600">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="s in detailKelas.siswa" :key="s.id">
+                <tr class="border-b border-gray-100"
+                  :class="s.rekap.total_tidak >= 5 ? 'bg-red-50' : 'hover:bg-gray-50'">
+                  <td class="px-4 py-2.5 font-medium text-gray-800">
+                    <span x-text="s.nama"></span>
+                    <span x-show="s.jenis_kelamin==='P'" class="ml-1 text-xs text-purple-500">(P)</span>
+                  </td>
+                  <td class="text-center px-3 py-2.5 text-green-600 font-semibold" x-text="s.rekap.total_sholat"></td>
+                  <td class="text-center px-3 py-2.5 text-amber-600 font-semibold" x-text="s.rekap.total_terlambat || 0"></td>
+                  <td class="text-center px-3 py-2.5 text-red-600 font-semibold" x-text="s.rekap.total_tidak"></td>
+                  <td class="text-center px-3 py-2.5 text-purple-600 font-semibold" x-text="s.rekap.total_haid || '—'"></td>
+                  <td class="text-center px-3 py-2.5">
+                    <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                      :class="s.rekap.persen >= 80 ? 'bg-green-100 text-green-700' :
+                              s.rekap.persen >= 50 ? 'bg-yellow-100 text-yellow-700' :
+                                                     'bg-red-100 text-red-700'"
+                      x-text="s.rekap.persen + '%'">
+                    </span>
+                  </td>
+                  <td class="text-center px-3 py-2.5">
+                    <button @click="showDetailSiswa(s)" class="text-xs text-blue-600 hover:text-blue-800 font-semibold underline">
+                      Lihat
+                    </button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Modal Detail Sholat Siswa (Subuh, Dzuhur, Ashar, Maghrib, Isya + Jam Pelaporan) -->
+  <template x-if="detailSiswa">
+    <div class="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" @click.self="detailSiswa=null">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-auto">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white">
+          <div>
+            <h3 class="font-bold text-lg text-gray-800" x-text="detailSiswa.nama"></h3>
+            <p class="text-sm text-gray-500" x-text="rangeLabel"></p>
+          </div>
+          <button @click="detailSiswa=null" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="text-left px-3 py-2 font-semibold text-gray-600">Hari</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Subuh</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Dzuhur</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Ashar</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Maghrib</th>
+                <th class="text-center px-2 py-2 font-semibold text-gray-600">Isya</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="hari in detailSiswa.rekap.detail" :key="hari.tanggal">
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="px-3 py-2.5 text-gray-700 font-medium whitespace-nowrap"
+                    x-text="window.app ? window.app.formatTanggalPendek(hari.tanggal) : hari.tanggal"></td>
+                  <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+                    <td class="text-center px-2 py-2.5">
+                      <template x-if="hari.waktu[w] !== undefined">
+                        <div class="flex flex-col items-center gap-0.5">
+                          <span class="text-base leading-none" x-text="statusIcon(hari.waktu[w])"></span>
+                          <span class="text-[10px] font-mono leading-none"
+                            :class="{
+                              'text-green-600': hari.waktu[w].status === 'sholat' && !hari.waktu[w].terlambat,
+                              'text-amber-600 font-bold': hari.waktu[w].status === 'sholat' && hari.waktu[w].terlambat,
+                              'text-red-500':   hari.waktu[w].status === 'tidak_sholat',
+                              'text-purple-600':hari.waktu[w].status === 'haid',
+                              'text-gray-400':  hari.waktu[w].status === 'belum'
+                            }"
+                            x-text="hari.waktu[w].jam || '—'">
+                          </span>
+                          <template x-if="hari.waktu[w].terlambat">
+                            <span class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 rounded leading-tight mt-0.5">Terlambat</span>
+                          </template>
+                        </div>
+                      </template>
+                      <template x-if="hari.waktu[w] === undefined">
+                        <span class="text-gray-200 text-xs">·</span>
+                      </template>
+                    </td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <p class="text-[11px] text-gray-400 mt-3">Jam pelaporan menggunakan zona waktu sekolah. "—" = belum lapor.</p>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageDashAdmin() {
+  return {
+    minggu: 0,
+    rangeLabel: '',
+    kelasList: [],
+    detailKelas: null,
+    detailSiswa: null,
+
+    async init() {
+      if (window.app && window.app.dashboardData && ['superadmin','admin','kepala_sekolah'].includes(window.app.dashboardData.role)) {
+        this.onDataUpdated(window.app.dashboardData);
+      }
+      if (window.app && window.app.token) {
+        await this.load();
+      }
+    },
+
+    onPageActive() {
+      if (window.app && window.app.dashboardData && ['superadmin','admin','kepala_sekolah'].includes(window.app.dashboardData.role) && this.kelasList.length === 0) {
+        this.onDataUpdated(window.app.dashboardData);
+      } else if (this.kelasList.length === 0 && window.app && window.app.token) {
+        this.load();
+      }
+    },
+
+    onDataUpdated(res) {
+      if (!res) return;
+      this.kelasList  = res.kelas || [];
+      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+    },
+
+    async load() {
+      if (!window.app || !window.app.token) return;
+      const res = await window.app.api('getDashboard', { minggu: this.minggu });
+      if (res.ok) {
+        this.onDataUpdated(res);
+      } else {
+        window.app.showToast(res.msg, 'err');
+      }
+    },
+
+    async lihatDetailKelas(kelasId) {
+      if (!window.app) return;
+      const res = await window.app.api('getRekapKelas', { kelas_id: kelasId, minggu: this.minggu });
+      if (res.ok) {
+        this.detailKelas = { kelas: res.kelas, siswa: res.siswa, summary: res.summary };
+      } else {
+        window.app.showToast(res.msg, 'err');
+      }
+    },
+
+    showDetailSiswa(s) {
+      this.detailSiswa = s;
+    },
+
+    statusIcon(s) {
+      const v = (typeof s === 'object' && s !== null) ? s.status : s;
+      const t = (typeof s === 'object' && s !== null) ? s.terlambat : false;
+      if (v === 'sholat')       return t ? '⚠️' : '✅';
+      if (v === 'tidak_sholat') return '❌';
+      if (v === 'haid')         return '🌙';
+      return '—';
+    }
+  };
+}
+</script>
+
+      </div>
+
+      <!-- ── USER MANAGEMENT ────────────────────────────────── -->
+      <div x-cloak x-show="page==='users'" class="fade-in">
+        <!-- PageUsers.html — Manajemen User -->
+<div x-data="PageUsers()" 
+     @users-updated.window="onUsersUpdated($event.detail)"
+     x-init="init()">
+
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xl font-bold text-gray-800">Kelola User</h2>
+      <button @click="refreshData()" title="Sinkronkan dengan Database"
+        class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition border border-gray-200">
+        <svg class="w-4 h-4" :class="loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+    </div>
+    <button @click="openModal()"
+      class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Tambah User
+    </button>
+  </div>
+
+  <!-- Filter -->
+  <div class="flex flex-wrap gap-3 mb-5">
+    <input type="text" x-model="search" @input="filterUsers()" placeholder="Cari nama / username..."
+      class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-60" />
+    <select x-model="filterRole" @change="filterUsers()"
+      class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="">Semua Role</option>
+      <template x-if="myRole() === 'superadmin'"><option value="superadmin">Super Admin</option></template>
+      <option value="admin">Admin</option>
+      <option value="kepala_sekolah">Kepala Sekolah</option>
+      <option value="walikelas">Wali Kelas</option>
+      <option value="siswa">Siswa</option>
+    </select>
+    <select x-model="filterKelas" @change="filterUsers()"
+      class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="">Semua Kelas</option>
+      <template x-for="k in (window.app ? window.app.kelasData : [])" :key="k.id">
+        <option :value="k.id" x-text="k.nama_kelas"></option>
+      </template>
+    </select>
+  </div>
+
+  <!-- Tabel user -->
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="text-left px-4 py-3 font-semibold text-gray-600">Nama</th>
+            <th class="text-left px-4 py-3 font-semibold text-gray-600">Username</th>
+            <th class="text-left px-3 py-3 font-semibold text-gray-600">Role</th>
+            <th class="text-left px-3 py-3 font-semibold text-gray-600">Kelas</th>
+            <th class="text-center px-3 py-3 font-semibold text-gray-600">Status</th>
+            <th class="text-center px-3 py-3 font-semibold text-gray-600">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="u in filtered" :key="u.id">
+            <tr class="border-b border-gray-100 hover:bg-gray-50"
+              x-show="!(myRole() !== 'superadmin' && u.role === 'superadmin')">
+              <td class="px-4 py-3 font-medium text-gray-800">
+                <span x-text="u.nama_lengkap"></span>
+                <span x-show="u.jenis_kelamin==='P'" class="ml-1 text-xs text-purple-400">(P)</span>
+              </td>
+              <td class="px-4 py-3 text-gray-600 font-mono text-xs" x-text="u.username"></td>
+              <td class="px-3 py-3">
+                <span class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  :class="roleClass(u.role)" x-text="window.app ? window.app.labelRole(u.role) : u.role"></span>
+              </td>
+              <td class="px-3 py-3 text-gray-600 text-xs" x-text="namaKelas(u.kelas_id)"></td>
+              <td class="text-center px-3 py-3">
+                <span :class="u.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+                  class="px-2 py-0.5 rounded-full text-xs font-medium"
+                  x-text="u.is_active ? 'Aktif' : 'Nonaktif'">
+                </span>
+              </td>
+              <td class="text-center px-3 py-3">
+                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                  <!-- Admin tidak bisa edit/reset superadmin -->
+                  <template x-if="!(myRole() === 'admin' && u.role === 'superadmin')">
+                    <span class="flex items-center gap-1.5">
+                      <button @click="openModal(u)" class="text-blue-600 hover:text-blue-800 text-xs font-medium">Edit</button>
+                      <span class="text-gray-300">|</span>
+                      <button @click="openResetPass(u)" class="text-orange-500 hover:text-orange-700 text-xs font-medium">Reset Pass</button>
+                    </span>
+                  </template>
+                  <template x-if="bolehHapus(u)">
+                    <span class="flex items-center gap-1.5">
+                      <span class="text-gray-300">|</span>
+                      <button @click="hapus(u)" class="text-red-500 hover:text-red-700 text-xs font-medium">Hapus</button>
+                    </span>
+                  </template>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="filtered.length === 0">
+            <td colspan="6" class="text-center py-10 text-gray-400">Tidak ada user ditemukan.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal Tambah/Edit User -->
+  <template x-if="showModal">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showModal=false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[85vh] flex flex-col overflow-hidden">
+        <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0">
+          <h3 class="font-bold text-lg text-gray-800" x-text="form.id ? 'Edit User' : 'Tambah User'"></h3>
+          <button @click="showModal=false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="simpan" class="flex flex-col flex-1 overflow-hidden">
+          <div class="p-6 space-y-4 overflow-y-auto flex-1">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap *</label>
+              <input type="text" x-model="form.nama_lengkap" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">ID / Username *</label>
+              <input type="text" x-model="form.username" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <template x-if="!form.id">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Password *</label>
+                <input type="password" x-model="form.password" required minlength="6"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </template>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Role *</label>
+              <select x-model="form.role" required @change="if(form.role !== 'siswa') form.jenis_kelamin = 'L'"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">Pilih role...</option>
+                <option value="admin">Admin</option>
+                <option value="kepala_sekolah">Kepala Sekolah</option>
+                <option value="walikelas">Wali Kelas</option>
+                <option value="siswa">Siswa</option>
+                <template x-if="window.app && window.app.user.role === 'superadmin'">
+                  <option value="superadmin">Super Admin</option>
+                </template>
+              </select>
+            </div>
+            <template x-if="form.role === 'siswa'">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Jenis Kelamin</label>
+                <select x-model="form.jenis_kelamin"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="L">Laki-laki</option>
+                  <option value="P">Perempuan</option>
+                </select>
+              </div>
+            </template>
+            <template x-if="['walikelas','siswa'].includes(form.role)">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Kelas</label>
+                <select x-model="form.kelas_id"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="">Pilih kelas...</option>
+                  <template x-for="k in (window.app ? window.app.kelasData : [])" :key="k.id">
+                    <option :value="k.id" x-text="k.nama_kelas"></option>
+                  </template>
+                </select>
+              </div>
+            </template>
+            <template x-if="form.id">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select x-model="form.is_active"
+                  class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option :value="true">Aktif</option>
+                  <option :value="false">Nonaktif</option>
+                </select>
+              </div>
+            </template>
+          </div>
+          <div class="p-4 border-t border-gray-200 bg-gray-50 flex gap-3 flex-shrink-0">
+            <button type="button" @click="showModal=false"
+              class="flex-1 border border-gray-300 bg-white text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
+              Batal
+            </button>
+            <button type="submit"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <!-- Modal Reset Password -->
+  <template x-if="showResetModal">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showResetModal=false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+        <div class="p-6 border-b border-gray-200">
+          <h3 class="font-bold text-lg">Reset Password</h3>
+          <p class="text-sm text-gray-500 mt-1" x-text="'User: ' + (resetTarget ? resetTarget.nama_lengkap : '')"></p>
+        </div>
+        <form @submit.prevent="submitResetPass" class="p-6 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru *</label>
+            <input type="password" x-model="resetPass" required minlength="6"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Minimal 6 karakter" />
+          </div>
+          <div class="flex gap-3">
+            <button type="button" @click="showResetModal=false"
+              class="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition">
+              Batal
+            </button>
+            <button type="submit"
+              class="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-lg text-sm font-medium transition">
+              Reset
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageUsers() {
+  return {
+    users: [],
+    filtered: [],
+    search: '',
+    filterRole: '',
+    filterKelas: '',
+    showModal: false,
+    showResetModal: false,
+    resetTarget: null,
+    resetPass: '',
+    form: {},
+    loading: false,
+
+    myRole() {
+      return (window.app && window.app.session) ? window.app.session.role : '';
+    },
+
+    async init() {
+      if (window.app && window.app.usersData && window.app.usersData.length > 0) {
+        this.users = window.app.usersData;
+        this.filterUsers();
+      }
+      if (window.app) {
+        await window.app.loadUsers();
+      }
+    },
+
+    onUsersUpdated(list) {
+      this.users = list || [];
+      this.filterUsers();
+    },
+
+    async refreshData() {
+      if (!window.app) return;
+      this.loading = true;
+      await window.app.loadUsers();
+      this.users = window.app.usersData || [];
+      this.filterUsers();
+      this.loading = false;
+    },
+
+    filterUsers() {
+      const list = this.users || [];
+      const searchStr = String(this.search || '').toLowerCase().trim();
+      this.filtered = list.filter(u => {
+        const nama = String(u.nama_lengkap || '').toLowerCase();
+        const uname = String(u.username !== undefined && u.username !== null ? u.username : '').toLowerCase();
+        const matchSearch = !searchStr || nama.includes(searchStr) || uname.includes(searchStr);
+        const matchRole  = !this.filterRole  || u.role === this.filterRole;
+        const matchKelas = !this.filterKelas || String(u.kelas_id) === String(this.filterKelas);
+        return matchSearch && matchRole && matchKelas;
+      });
+    },
+
+    async openModal(u = null) {
+      if (u) {
+        this.form = { ...u };
+      } else {
+        this.form = { jenis_kelamin: 'L', role: 'siswa', is_active: true };
+      }
+      this.showModal = true;
+      if (window.app) await window.app.loadKelas();
+    },
+
+    async simpan() {
+      if (!window.app) return;
+      const ok = await window.app.simpanUser(this.form);
+      if (ok) {
+        this.showModal = false;
+        this.users = window.app.usersData || [];
+        this.filterUsers();
+      }
+    },
+
+    bolehHapus(u) {
+      if (!window.app || !window.app.user) return false;
+      const currentRole = window.app.user.role;
+      const currentId   = window.app.user.id;
+      // Hanya superadmin, admin, atau kepala sekolah
+      if (!['superadmin', 'admin', 'kepala_sekolah'].includes(currentRole)) return false;
+      // Tidak bisa hapus diri sendiri
+      if (String(u.id) === String(currentId)) return false;
+      // Superadmin tidak bisa dihapus siapapun
+      if (u.role === 'superadmin') return false;
+      // Admin tidak bisa hapus sesama admin
+      if (currentRole === 'admin' && u.role === 'admin') return false;
+      return true;
+    },
+
+    async hapus(u) {
+      if (!window.app) return;
+      const ok = await window.app.hapusUser(u.id);
+      if (ok) {
+        this.users = window.app.usersData || [];
+        this.filterUsers();
+      }
+    },
+
+    openResetPass(u) {
+      this.resetTarget = u;
+      this.resetPass   = '';
+      this.showResetModal = true;
+    },
+
+    async submitResetPass() {
+      if (!window.app) return;
+      const ok = await window.app.resetPasswordUser(this.resetTarget.id, this.resetPass);
+      if (ok) this.showResetModal = false;
+    },
+
+    namaKelas(kelasId) {
+      if (!kelasId || !window.app) return '—';
+      const k = (window.app.kelasData || []).find(k => String(k.id) === String(kelasId));
+      return k ? k.nama_kelas : '—';
+    },
+
+    roleClass(role) {
+      const map = {
+        superadmin:    'bg-red-100 text-red-700',
+        admin:         'bg-orange-100 text-orange-700',
+        kepala_sekolah:'bg-purple-100 text-purple-700',
+        walikelas:     'bg-blue-100 text-blue-700',
+        siswa:         'bg-gray-100 text-gray-700'
+      };
+      return map[role] || 'bg-gray-100 text-gray-700';
+    }
+  };
+}
+</script>
+
+      </div>
+
+      <!-- ── KELAS MANAGEMENT ───────────────────────────────── -->
+      <div x-cloak x-show="page==='kelas'" class="fade-in">
+        <!-- PageKelas.html — Manajemen Kelas -->
+<div x-data="PageKelas()" 
+     @kelas-updated.window="onKelasUpdated($event.detail)"
+     x-init="init()">
+
+  <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <h2 class="text-xl font-bold text-gray-800">Kelola Kelas</h2>
+      <button @click="refreshData()" title="Sinkronkan dengan Database"
+        class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition border border-gray-200">
+        <svg class="w-4 h-4" :class="loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </button>
+    </div>
+    <button @click="openModal()"
+      class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+      </svg>
+      Tambah Kelas
+    </button>
+  </div>
+
+  <!-- Grid kelas -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <template x-for="k in kelasList" :key="k.id">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
+        <div class="flex items-start justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-gray-800" x-text="'Kelas ' + k.nama_kelas"></h3>
+            <p class="text-sm text-gray-500 mt-1">
+              Wali Kelas: <span class="font-medium text-gray-700" x-text="k.nama_walikelas || '—'"></span>
+            </p>
+          </div>
+          <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+          </div>
+        </div>
+        <div class="flex gap-2 mt-5 pt-3 border-t border-gray-100">
+          <button @click="openModal(k)"
+            class="flex-1 text-sm text-blue-600 border border-blue-200 hover:bg-blue-50 py-2 rounded-lg font-medium transition">
+            Edit
+          </button>
+          <button @click="hapus(k.id)"
+            class="flex-1 text-sm text-red-500 border border-red-200 hover:bg-red-50 py-2 rounded-lg font-medium transition">
+            Hapus
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Empty state -->
+    <template x-if="kelasList.length === 0">
+      <div class="col-span-full text-center py-16 text-gray-400">
+        <p class="text-5xl mb-3">🏫</p>
+        <p>Belum ada kelas. Tambah kelas terlebih dahulu.</p>
+      </div>
+    </template>
+  </div>
+
+  <!-- Modal Tambah/Edit Kelas -->
+  <template x-if="showModal">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showModal=false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm flex flex-col overflow-hidden">
+        <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0">
+          <h3 class="font-bold text-lg text-gray-800" x-text="form.id ? 'Edit Kelas' : 'Tambah Kelas'"></h3>
+          <button @click="showModal=false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="simpan" class="flex flex-col flex-1">
+          <div class="p-6 space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nama Kelas *</label>
+              <input type="text" x-model="form.nama_kelas" required placeholder="Contoh: 7A, 8B, 9C"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Wali Kelas</label>
+              <select x-model="form.walikelas_id"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="">— Belum ditentukan —</option>
+                <template x-for="u in waliOptions()" :key="u.id">
+                  <option :value="u.id" x-text="u.nama_lengkap"></option>
+                </template>
+              </select>
+            </div>
+          </div>
+          <div class="p-4 border-t border-gray-200 bg-gray-50 flex gap-3 flex-shrink-0">
+            <button type="button" @click="showModal=false"
+              class="flex-1 border border-gray-300 bg-white text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
+              Batal
+            </button>
+            <button type="submit"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageKelas() {
+  return {
+    kelas: [],
+    showModal: false,
+    form: {},
+    loading: false,
+
+    async init() {
+      if (window.app && window.app.kelasData && window.app.kelasData.length > 0) {
+        this.kelas = window.app.kelasData;
+      }
+      if (window.app) {
+        await window.app.loadKelas();
+      }
+    },
+
+    onKelasUpdated(list) {
+      this.kelas = list || [];
+    },
+
+    async refreshData() {
+      if (!window.app) return;
+      this.loading = true;
+      await window.app.loadKelas();
+      this.kelas = window.app.kelasData || [];
+      this.loading = false;
+    },
+
+    get kelasList() {
+      if (this.kelas && this.kelas.length > 0) return this.kelas;
+      if (window.app && window.app.kelasData && window.app.kelasData.length > 0) return window.app.kelasData;
+      return [];
+    },
+
+    async openModal(k = null) {
+      this.form = k ? { ...k } : { nama_kelas: '', walikelas_id: '' };
+      this.showModal = true;
+      if (window.app) await window.app.loadUsers();
+    },
+
+    async simpan() {
+      if (!window.app) return;
+      const ok = await window.app.simpanKelas(this.form);
+      if (ok) {
+        this.showModal = false;
+        this.kelas = window.app.kelasData || [];
+      }
+    },
+
+    async hapus(id) {
+      if (!window.app) return;
+      const ok = await window.app.hapusKelas(id);
+      if (ok) {
+        this.kelas = window.app.kelasData || [];
+      }
+    },
+
+    waliOptions() {
+      if (!window.app || !window.app.usersData) return [];
+      return window.app.usersData.filter(u => u.role === 'walikelas' && u.is_active);
+    }
+  };
+}
+</script>
+
+      </div>
+
+      <!-- ── SETTING SHOLAT ─────────────────────────────────── -->
+      <div x-cloak x-show="page==='setting'" class="fade-in">
+        <!-- PageSetting.html — Setting Waktu Sholat & Kalender Hari -->
+<div x-data="PageSetting()" x-init="init()">
+
+  <h2 class="text-xl font-bold text-gray-800 mb-6">Setting Waktu Sholat & Lokasi</h2>
+
+  <div class="space-y-6">
+
+    <!-- ── CARD 1: LOKASI & JADWAL SHOLAT ── -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div class="mb-4 border-b border-gray-100 pb-4">
+        <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+          <span>📍</span> Lokasi & Jadwal Waktu Sholat
+        </h3>
+        <p class="text-xs text-gray-500 mt-0.5">Pengaturan jam masuk waktu sholat sekolah.</p>
+      </div>
+
+      <!-- Info Lokasi Sekolah Terpilih -->
+      <div class="flex flex-wrap items-center gap-2 mb-5">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          📍 Lokasi: <strong>KAB. KOTAWARINGIN TIMUR (Kalimantan Tengah)</strong>
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          🕒 Waktu Indonesia Barat (WIB / UTC+7)
+        </span>
+      </div>
+
+      <!-- Jam Waktu Sholat (manual) -->
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-gray-700">Jam Masuk Waktu Sholat:</span>
+          <span class="text-[11px] text-gray-500">Edit langsung, klik Simpan setelah selesai</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+            <div class="bg-white p-2.5 rounded-lg border border-gray-200 text-center">
+              <label class="block text-xs font-bold text-gray-600 uppercase mb-1" x-text="capitalize(w)"></label>
+              <input type="time" x-model="lokasi.jadwal[w]"
+                class="w-full text-center font-bold text-sm border border-gray-300 rounded px-1 py-1.5 focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CARD 2: PENGATURAN WAJIB LAPOR (HARI SEKOLAH & LIBUR) ── -->
+    <template x-for="tipe in ['hari_sekolah', 'hari_libur']" :key="tipe">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h3 class="font-bold text-gray-800 mb-1"
+          x-text="tipe === 'hari_sekolah' ? '🏫 Hari Sekolah' : '🏖️ Hari Libur'">
+        </h3>
+        <p class="text-sm text-gray-500 mb-4"
+          x-text="tipe === 'hari_sekolah' ?
+            'Senin–Jumat (jam belajar). Khusus hari Jumat, Ashar otomatis wajib dilaporkan.' :
+            'Sabtu–Minggu & tanggal libur khusus. Semua waktu dilaporkan.'">
+        </p>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+            <div @click="toggleWaktu(tipe, w)"
+              class="w-full py-3 px-2 rounded-xl border-2 text-center text-sm font-medium transition cursor-pointer select-none"
+              :class="(setting && setting[tipe] && setting[tipe][w]) ?
+                'bg-green-500 text-white border-green-500 shadow-sm' :
+                'bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300'">
+              <div class="font-bold" x-text="capitalize(w)"></div>
+              <div class="text-xs mt-1" x-text="(setting && setting[tipe] && setting[tipe][w]) ? '✅ Wajib' : '❌ Tidak wajib'"></div>
+              <template x-if="tipe === 'hari_sekolah' && w === 'ashar' && !(setting && setting[tipe] && setting[tipe][w])">
+                <div class="text-[10px] text-amber-600 font-semibold mt-1">*(Jumat otomatis wajib)</div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- Tombol simpan semua setting -->
+    <div class="flex justify-end">
+      <button @click="simpanSetting()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition shadow-sm flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <span>Simpan Semua Pengaturan</span>
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <hr class="border-gray-200 my-8" />
+
+    <!-- ── CARD 3: KALENDER OVERRIDE ── -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-bold text-gray-800 text-lg">📅 Kalender Khusus</h3>
+          <p class="text-sm text-gray-500 mt-0.5">Override tipe hari untuk tanggal tertentu (libur kabut asap, ujian, dll).</p>
+        </div>
+        <button @click="openKalenderModal()"
+          class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Tambah Tanggal
+        </button>
+      </div>
+
+      <template x-if="kalenderList.length > 0">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600">Tanggal</th>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600">Tipe Hari</th>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600">Keterangan</th>
+                <th class="text-center px-4 py-3 font-semibold text-gray-600">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="k in kalenderList" :key="k.tanggal">
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="px-4 py-3 font-medium text-gray-800" x-text="window.app ? window.app.formatTanggal(k.tanggal) : k.tanggal"></td>
+                  <td class="px-4 py-3">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                      :class="k.tipe_hari === 'hari_libur' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'"
+                      x-text="k.tipe_hari === 'hari_libur' ? '🏖️ Libur' : '🏫 Sekolah'">
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-gray-600" x-text="k.keterangan || '—'"></td>
+                  <td class="text-center px-4 py-3">
+                    <button @click="hapusKalenderItem(k.tanggal)"
+                      class="text-red-500 hover:text-red-700 text-xs font-medium">Hapus</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <template x-if="kalenderList.length === 0">
+        <div class="text-center py-10 text-gray-400 bg-white rounded-xl border border-gray-200">
+          Belum ada tanggal khusus ditentukan.
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Modal Tambah Kalender (dengan Rentang Tanggal) -->
+  <template x-if="showKalenderModal">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showKalenderModal=false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+        <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+          <h3 class="font-bold text-lg text-gray-800">Tambah Tanggal Khusus</h3>
+          <button @click="showKalenderModal=false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="simpanKalender" class="p-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dari Tanggal *</label>
+              <input type="date" x-model="kalenderForm.tanggal_mulai" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
+              <input type="date" x-model="kalenderForm.tanggal_selesai" :min="kalenderForm.tanggal_mulai"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 -mt-2">Kosongkan "Sampai Tanggal" jika hanya 1 hari libur.</p>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Hari *</label>
+            <select x-model="kalenderForm.tipe_hari" required
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="hari_libur">🏖️ Hari Libur</option>
+              <option value="hari_sekolah">🏫 Hari Sekolah</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+            <input type="text" x-model="kalenderForm.keterangan" placeholder="Contoh: Libur Kabut Asap, Libur Idul Fitri"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button type="button" @click="showKalenderModal=false"
+              class="flex-1 border border-gray-300 bg-white text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
+              Batal
+            </button>
+            <button type="submit"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageSetting() {
+  return {
+    setting: {
+      hari_sekolah: { subuh: true, dzuhur: false, ashar: false, maghrib: true, isya: true },
+      hari_libur:   { subuh: true, dzuhur: true,  ashar: true,  maghrib: true, isya: true }
+    },
+    lokasi: {
+      zona_waktu: 'WIB',
+      kota_id:    '2208',
+      nama_kota:  'KAB. KOTAWARINGIN TIMUR',
+      jadwal:     { subuh: '03:57', dzuhur: '11:19', ashar: '14:25', maghrib: '17:23', isya: '18:32' }
+    },
+    kalender: [],
+    showKalenderModal: false,
+    kalenderForm: { tanggal_mulai: '', tanggal_selesai: '', tipe_hari: 'hari_libur', keterangan: '' },
+
+    get kalenderList() {
+      return (window.app && window.app.kalenderData) ? window.app.kalenderData : this.kalender;
+    },
+
+    async init() {
+      if (window.app) {
+        await window.app.loadSetting();
+        if (window.app.settingData) {
+          if (window.app.settingData.hari_sekolah) this.setting.hari_sekolah = window.app.settingData.hari_sekolah;
+          if (window.app.settingData.hari_libur)   this.setting.hari_libur   = window.app.settingData.hari_libur;
+          if (window.app.settingData.lokasi) {
+            this.lokasi = { ...this.lokasi, ...window.app.settingData.lokasi, zona_waktu: 'WIB' };
+          }
+        }
+        if (window.app.kalenderData) {
+          this.kalender = window.app.kalenderData;
+        }
+      }
+    },
+
+    openKalenderModal() {
+      this.kalenderForm = { tanggal_mulai: '', tanggal_selesai: '', tipe_hari: 'hari_libur', keterangan: '' };
+      this.showKalenderModal = true;
+    },
+
+    toggleWaktu(tipe, w) {
+      if (!this.setting[tipe]) this.setting[tipe] = {};
+      this.setting[tipe][w] = !this.setting[tipe][w];
+    },
+
+    async simpanSetting() {
+      if (!window.app) return;
+      this.lokasi.zona_waktu = 'WIB';
+      const payload = {
+        hari_sekolah: this.setting.hari_sekolah,
+        hari_libur:   this.setting.hari_libur,
+        lokasi:       this.lokasi
+      };
+      const res = await window.app.api('updateSetting', payload);
+      window.app.showToast(res.msg || 'Pengaturan berhasil disimpan.', res.ok ? 'ok' : 'err');
+    },
+
+    async simpanKalender() {
+      if (!window.app) return;
+      const payload = {
+        tanggal_mulai:   this.kalenderForm.tanggal_mulai,
+        tanggal_selesai: this.kalenderForm.tanggal_selesai || this.kalenderForm.tanggal_mulai,
+        tipe_hari:       this.kalenderForm.tipe_hari,
+        keterangan:      this.kalenderForm.keterangan
+      };
+      const ok = await window.app.simpanKalender(payload);
+      if (ok) {
+        this.showKalenderModal = false;
+        this.kalender = window.app.kalenderData || [];
+      }
+    },
+
+    async hapusKalenderItem(tgl) {
+      if (!window.app) return;
+      await window.app.hapusKalender(tgl);
+      this.kalender = window.app.kalenderData || [];
+    },
+
+    capitalize(str) {
+      return str ? (str.charAt(0).toUpperCase() + str.slice(1)) : '';
+    }
+  };
+}
+</script>
+
+      </div>
+
+      <!-- ── GANTI PASSWORD ─────────────────────────────────── -->
+      <div x-cloak x-show="page==='ganti-password'" class="fade-in">
+        <!-- PageGantiPassword.html — Ganti Password Sendiri -->
+<div x-data="PageGantiPassword()" class="max-w-md mx-auto">
+
+  <h2 class="text-xl font-bold text-gray-800 mb-6">Ganti Password</h2>
+
+  <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+    <form @submit.prevent="submit" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password Lama *</label>
+        <div class="relative">
+          <input :type="show.lama ? 'text' : 'password'" x-model="form.password_lama" required
+            class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10" />
+          <button type="button" @click="show.lama=!show.lama"
+            class="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                x-show="!show.lama"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                x-show="show.lama"
+                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru *</label>
+        <input :type="show.baru ? 'text' : 'password'" x-model="form.password_baru" required minlength="6"
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Minimal 6 karakter" />
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru *</label>
+        <input :type="show.baru ? 'text' : 'password'" x-model="form.password_konfirmasi" required
+          class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          :class="form.password_baru && form.password_konfirmasi && form.password_baru !== form.password_konfirmasi ? 'border-red-400' : ''" />
+        <p x-show="form.password_baru && form.password_konfirmasi && form.password_baru !== form.password_konfirmasi"
+          class="text-xs text-red-500 mt-1">Password tidak cocok</p>
+      </div>
+
+      <!-- Strength indicator -->
+      <template x-if="form.password_baru">
+        <div>
+          <div class="flex gap-1 mt-1">
+            <div class="h-1.5 flex-1 rounded-full"
+              :class="strength >= 1 ? 'bg-red-400' : 'bg-gray-200'"></div>
+            <div class="h-1.5 flex-1 rounded-full"
+              :class="strength >= 2 ? 'bg-yellow-400' : 'bg-gray-200'"></div>
+            <div class="h-1.5 flex-1 rounded-full"
+              :class="strength >= 3 ? 'bg-green-500' : 'bg-gray-200'"></div>
+          </div>
+          <p class="text-xs text-gray-500 mt-1"
+            x-text="['', 'Lemah', 'Sedang', 'Kuat'][strength]"></p>
+        </div>
+      </template>
+
+      <button type="submit"
+        :disabled="form.password_baru !== form.password_konfirmasi"
+        class="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white py-3 rounded-lg text-sm font-semibold transition mt-2">
+        Ganti Password
+      </button>
+    </form>
+  </div>
+
+</div>
+
+<script>
+function PageGantiPassword() {
+  return {
+    form: { password_lama: '', password_baru: '', password_konfirmasi: '' },
+    show: { lama: false, baru: false },
+
+    get strength() {
+      const p = this.form.password_baru;
+      if (!p || p.length < 6) return 1;
+      let s = 1;
+      if (p.length >= 8) s++;
+      if (/[A-Z]/.test(p) || /[0-9]/.test(p) || /[^a-zA-Z0-9]/.test(p)) s++;
+      return Math.min(s, 3);
+    },
+
+    async submit() {
+      if (this.form.password_baru !== this.form.password_konfirmasi) {
+        if (window.app) window.app.showToast('Password tidak cocok.', 'err');
+        return;
+      }
+      if (!window.app) return;
+      const ok = await window.app.gantiPassword(this.form);
+      if (ok) {
+        this.form = { password_lama: '', password_baru: '', password_konfirmasi: '' };
+      }
+    }
+  };
+}
+</script>
+
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ALPINE.JS APP STATE
+═══════════════════════════════════════════════════════════════ -->
+<script>
+const APP_URL = '/api';
+
+function App() {
+  return {
+    // ── State ───────────────────────────────────────────────
+    page:        'login',
+    loading:     false,
+    sidebarOpen: false,
+    showPass:    false,
+    user:        {},
+    token:       null,
+    toast:       { show: false, msg: '', type: 'ok' },
+
+    // ── Forms ───────────────────────────────────────────────
+    loginForm: { username: '', password: '' },
+
+    // ── Data state (diisi oleh masing-masing page) ──────────
+    dashboardData:  null,
+    laporData:      null,
+    usersData:      [],
+    kelasData:      [],
+    settingData:    null,
+    kalenderData:   [],
+
+    // ── Init ───────────────────────────────────────────────
+    init() {
+      window.app = this;
+      // Cek session tersimpan
+      const saved = sessionStorage.getItem('smp_session');
+      if (saved) {
+        try {
+          const sess = JSON.parse(saved);
+          this.user  = sess.user;
+          this.token = sess.token;
+          this.goHome();
+        } catch(e) {
+          sessionStorage.removeItem('smp_session');
+        }
+      }
+    },
+
+    // ── Navigasi ────────────────────────────────────────────
+    navigate(p) {
+      this.page = p;
+      this.$nextTick(() => {
+        if (p === 'lapor')               this.loadLapor();
+        if (p === 'dashboard-siswa')     this.loadDashboard();
+        if (p === 'dashboard-walikelas') this.loadDashboardWalikelas();
+        if (p === 'dashboard-admin')     this.loadDashboardAdmin();
+        if (p === 'users')               this.loadUsers();
+        if (p === 'kelas')               this.loadKelas();
+        if (p === 'setting')             this.loadSetting();
+      });
+    },
+
+    goHome() {
+      const role = this.user.role;
+      if (role === 'siswa')                      this.navigate('lapor');
+      else if (role === 'walikelas')             this.navigate('dashboard-walikelas');
+      else if (role === 'kepala_sekolah')        this.navigate('dashboard-admin');
+      else                                       this.navigate('dashboard-admin');
+    },
+
+    navItems() {
+      const role = this.user.role;
+      const iconHome    = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`;
+      const iconSholat  = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`;
+      const iconUsers   = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`;
+      const iconKelas   = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
+      const iconSetting = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`;
+      const iconPass    = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>`;
+
+      const items = [];
+
+      if (role === 'siswa') {
+        items.push({ page: 'lapor',            label: 'Lapor Sholat',  icon: iconSholat });
+        items.push({ page: 'dashboard-siswa',  label: 'Riwayat Saya', icon: iconHome });
+      }
+      if (role === 'walikelas') {
+        items.push({ page: 'dashboard-walikelas', label: 'Rekap Kelas', icon: iconHome });
+      }
+      if (['superadmin','admin','kepala_sekolah'].includes(role)) {
+        items.push({ page: 'dashboard-admin', label: 'Dashboard',   icon: iconHome });
+      }
+      if (['superadmin','admin'].includes(role)) {
+        items.push({ page: 'users',   label: 'Kelola User',   icon: iconUsers });
+        items.push({ page: 'kelas',   label: 'Kelola Kelas',  icon: iconKelas });
+        items.push({ page: 'setting', label: 'Setting Sholat',icon: iconSetting });
+      }
+      items.push({ page: 'ganti-password', label: 'Ganti Password', icon: iconPass });
+
+      return items;
+    },
+
+    labelRole(r) {
+      const map = {
+        superadmin:    'Super Admin',
+        admin:         'Admin',
+        kepala_sekolah:'Kepala Sekolah',
+        walikelas:     'Wali Kelas',
+        siswa:         'Siswa'
+      };
+      return map[r] || r;
+    },
+
+    // ── Auth ────────────────────────────────────────────────
+    async doLogin() {
+      const res = await this.api('login', this.loginForm);
+      if (res.ok) {
+        this.user  = res.user;
+        this.token = res.token;
+        sessionStorage.setItem('smp_session', JSON.stringify({ user: res.user, token: res.token }));
+        this.loginForm = { username: '', password: '' };
+        this.goHome();
+        this.showToast('Selamat datang, ' + res.user.nama + '!', 'ok');
+      } else {
+        this.showToast(res.msg || 'Login gagal', 'err');
+      }
+    },
+
+    doLogout() {
+      sessionStorage.removeItem('smp_session');
+      this.user  = {};
+      this.token = null;
+      this.page  = 'login';
+    },
+
+    // ── API Helper: Modern Fetch API ke /api ──
+    async api(action, data = {}) {
+      this.loading = true;
+      const payload = { action, token: this.token, data };
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+        const res = await fetch(APP_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(this.token ? { 'Authorization': 'Bearer ' + this.token } : {})
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const result = await res.json();
+        this.loading = false;
+
+        if (result && !result.ok && result.msg && (result.msg.includes('Sesi habis') || result.msg.includes('Silakan login ulang'))) {
+          this.doLogout();
+          this.showToast(result.msg, 'err');
+          return result;
+        }
+
+        return result || { ok: false, msg: 'Respon server kosong.' };
+      } catch (err) {
+        this.loading = false;
+        const msg = (err.name === 'AbortError') 
+          ? 'Koneksi timeout (30s). Silakan coba lagi.' 
+          : 'Gagal terhubung ke server: ' + err.message;
+        this.showToast(msg, 'err');
+        return { ok: false, msg: msg };
+      }
+    },
+
+    showToast(msg, type = 'ok') {
+      this.toast = { show: true, msg, type };
+      setTimeout(() => { this.toast.show = false; }, 3500);
+    },
+
+    // ── Load Functions ──────────────────────────────────────
+    async loadLapor() {
+      const res = await this.api('getFormHariIni');
+      if (res.ok) {
+        this.laporData = res.data;
+        window.dispatchEvent(new CustomEvent('lapor-updated', { detail: res.data }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadDashboard(minggu = 0) {
+      const res = await this.api('getDashboard', { minggu });
+      if (res.ok) {
+        this.dashboardData = res;
+        window.dispatchEvent(new CustomEvent('dashboard-siswa-updated', { detail: res }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadDashboardWalikelas(minggu = 0) {
+      const res = await this.api('getDashboard', { minggu });
+      if (res.ok) {
+        this.dashboardData = res;
+        window.dispatchEvent(new CustomEvent('dashboard-walikelas-updated', { detail: res }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadDashboardAdmin(minggu = 0) {
+      const res = await this.api('getDashboard', { minggu });
+      if (res.ok) {
+        this.dashboardData = res;
+        window.dispatchEvent(new CustomEvent('dashboard-admin-updated', { detail: res }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadUsers() {
+      const res = await this.api('getUsers');
+      if (res.ok) {
+        this.usersData = res.data || [];
+        window.dispatchEvent(new CustomEvent('users-updated', { detail: this.usersData }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadKelas() {
+      const res = await this.api('getKelas');
+      if (res.ok) {
+        this.kelasData = res.data || [];
+        window.dispatchEvent(new CustomEvent('kelas-updated', { detail: this.kelasData }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadSetting() {
+      const [sRes, kRes] = await Promise.all([
+        this.api('getSetting'),
+        this.api('getKalender')
+      ]);
+      if (sRes.ok) this.settingData  = sRes.data;
+      if (kRes.ok) this.kalenderData = kRes.data || [];
+      window.dispatchEvent(new CustomEvent('setting-updated', {
+        detail: { setting: this.settingData, kalender: this.kalenderData }
+      }));
+    },
+
+    // ── Lapor Sholat ────────────────────────────────────────
+    async kirimLaporan(waktu, status) {
+      const res = await this.api('laporSholat', { waktu_sholat: waktu, status });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadLapor();
+    },
+
+    // ── User CRUD ───────────────────────────────────────────
+    async simpanUser(data) {
+      const action = data.id ? 'updateUser' : 'createUser';
+      const res = await this.api(action, data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadUsers();
+      return res.ok;
+    },
+
+    async resetPasswordUser(userId, passwordBaru) {
+      const res = await this.api('resetPassword', { id: userId, password_baru: passwordBaru });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      return res.ok;
+    },
+
+    async hapusUser(userId) {
+      if (!confirm('Yakin ingin menghapus user ini?')) return false;
+      const res = await this.api('deleteUser', { id: userId });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadUsers();
+      return res.ok;
+    },
+
+    // ── Kelas CRUD ──────────────────────────────────────────
+    async simpanKelas(data) {
+      const action = data.id ? 'updateKelas' : 'createKelas';
+      const res = await this.api(action, data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadKelas();
+      return res.ok;
+    },
+
+    async hapusKelas(id) {
+      if (!confirm('Hapus kelas ini?')) return;
+      const res = await this.api('deleteKelas', { id });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadKelas();
+    },
+
+    // ── Setting ─────────────────────────────────────────────
+    async simpanSetting() {
+      const res = await this.api('updateSetting', this.settingData);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+    },
+
+    async simpanKalender(data) {
+      const res = await this.api('saveKalender', data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadSetting();
+      return res.ok;
+    },
+
+    async hapusKalender(tanggal) {
+      if (!confirm('Hapus tanggal ini dari kalender?')) return;
+      const res = await this.api('deleteKalender', { tanggal });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadSetting();
+    },
+
+    // ── Ganti Password ──────────────────────────────────────
+    async gantiPassword(data) {
+      const res = await this.api('gantiPassword', data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      return res.ok;
+    },
+
+    // ── Utils ───────────────────────────────────────────────
+    labelStatus(s) {
+      if (s === 'sholat')      return '✅ Sholat';
+      if (s === 'tidak_sholat') return '❌ Tidak';
+      if (s === 'haid')        return '🌙 Haid';
+      return '—';
+    },
+
+    colorStatus(s) {
+      if (s === 'sholat')       return 'text-green-600 font-semibold';
+      if (s === 'tidak_sholat') return 'text-red-600 font-semibold';
+      if (s === 'haid')         return 'text-purple-600 font-semibold';
+      return 'text-gray-400';
+    },
+
+    formatTanggal(str) {
+      if (!str) return '';
+      const d = new Date(str);
+      return d.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    },
+
+    formatTanggalPendek(str) {
+      if (!str) return '';
+      const d = new Date(str);
+      return d.toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
+    }
+  };
+}
+</script>
+
+</body>
+</html>

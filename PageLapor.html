@@ -1,0 +1,225 @@
+<!-- PageLapor.html — Form Lapor Sholat Siswa -->
+<div x-data="PageLapor()" 
+     @lapor-updated.window="data = $event.detail"
+     x-init="init()">
+
+  <div class="flex items-center justify-between mb-2">
+    <div>
+      <h2 class="text-xl font-bold text-gray-800">Laporan Sholat Hari Ini</h2>
+      <p class="text-sm text-gray-500" x-text="data ? formatTanggal(data.tanggal) : ''"></p>
+    </div>
+    <button @click="refreshData()" title="Muat ulang form"
+      class="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition border border-gray-200">
+      <svg class="w-4 h-4" :class="loading ? 'animate-spin' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Header Info: Tipe Hari, Lokasi, dan Jam Sekarang -->
+  <template x-if="data">
+    <div class="flex flex-wrap items-center gap-2 mb-6">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
+        :class="data.tipe_hari === 'hari_libur' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'">
+        <span x-text="data.tipe_hari === 'hari_libur' ? '🏖️ Hari Libur — semua waktu dilaporkan' : '🏫 Hari Sekolah — sesuai jadwal'"></span>
+      </span>
+
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+        📍 <span x-text="data.nama_kota || 'SMP ISLAM TERPADU ALIGHAR'"></span>
+      </span>
+
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        🕒 Jam Saat Ini: <span class="font-bold" x-text="data.now_time"></span>
+      </span>
+    </div>
+  </template>
+
+  <!-- Form sholat -->
+  <template x-if="data && data.form && data.form.length > 0">
+    <div class="space-y-4">
+      <template x-for="item in data.form" :key="item.waktu">
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm transition"
+          :class="item.sudah_lapor ? 'border-l-4 border-l-green-500' : (item.can_lapor ? 'border-l-4 border-l-blue-500' : 'border-l-4 border-l-gray-300 opacity-90')">
+          
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="font-bold text-gray-800 text-lg" x-text="item.label"></h3>
+                <span class="text-xs px-2 py-0.5 rounded font-mono bg-gray-100 text-gray-600"
+                  x-text="item.jam_mulai ? (item.jam_mulai + ' - ' + item.jam_selesai) : ''"></span>
+              </div>
+              <p class="text-xs text-gray-500 mt-0.5" x-text="waktuDesc(item.waktu)"></p>
+            </div>
+
+            <!-- Status badge jika sudah lapor -->
+            <template x-if="item.sudah_lapor">
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-semibold px-3 py-1 rounded-full"
+                  :class="{
+                    'bg-amber-100 text-amber-800 border border-amber-300': item.status === 'sholat' && item.terlambat,
+                    'bg-green-100 text-green-700 border border-green-200':  item.status === 'sholat' && !item.terlambat,
+                    'bg-red-100 text-red-700 border border-red-200':      item.status === 'tidak_sholat',
+                    'bg-purple-100 text-purple-700 border border-purple-200': item.status === 'haid'
+                  }"
+                  x-text="item.status === 'sholat' ? (item.terlambat ? '⚠️ Sholat (Terlambat)' : '✅ Sholat (Tepat Waktu)') : labelStatus(item.status)">
+                </span>
+                <span class="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2 py-1 rounded-full font-mono"
+                  x-show="item.dilaporkan_at" x-text="'Pukul ' + item.dilaporkan_at"></span>
+              </div>
+            </template>
+          </div>
+
+          <!-- KONDISI 1: SUDAH LAPOR (TERKUNCI, TIDAK BISA DIEDIT KEMBALI) -->
+          <template x-if="item.sudah_lapor">
+            <div class="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-between text-xs text-gray-600">
+              <div class="flex items-center gap-2">
+                <span class="text-base">🔒</span>
+                <span>Laporan telah tercatat <strong :class="item.terlambat ? 'text-amber-700' : 'text-green-700'" x-text="item.status === 'sholat' ? (item.terlambat ? '(Sholat - Terlambat > 30 Menit)' : '(Sholat - Tepat Waktu)') : ('(' + labelStatus(item.status) + ')')"></strong> pada pukul <strong class="font-mono text-gray-800" x-text="item.dilaporkan_at || '-'"></strong> dan <span class="text-gray-800 font-medium">terkunci (tidak dapat diubah)</span>.</span>
+              </div>
+              <span class="font-semibold" :class="item.terlambat ? 'text-amber-600' : 'text-green-600'" x-text="item.terlambat ? 'Terlambat' : 'Selesai'"></span>
+            </div>
+          </template>
+
+          <!-- KONDISI 2: BELUM LAPOR TAPI BELUM MASUK WAKTU -->
+          <template x-if="!item.sudah_lapor && item.window_status === 'belum_mulai'">
+            <div>
+              <div class="mb-3 p-2.5 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2 text-xs text-amber-800">
+                <svg class="w-4 h-4 flex-shrink-0 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <span>Belum masuk waktu sholat. Pelaporan baru dibuka pada pukul <strong x-text="item.jam_mulai"></strong>.</span>
+              </div>
+              <div class="flex gap-2.5 opacity-40 cursor-not-allowed">
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">✅ Sholat</button>
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">❌ Tidak Sholat</button>
+                <template x-if="item.boleh_haid">
+                  <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">🌙 Haid</button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- KONDISI 3: BELUM LAPOR & WAKTU SHOLAT AKTIF SEDANG BERLANGSUNG -->
+          <template x-if="!item.sudah_lapor && item.window_status === 'aktif'">
+            <div>
+              <div class="mb-3 p-2.5 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between text-xs text-blue-800">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                  <span>Waktu pelaporan dibuka! Batas akhir pelaporan sebelum masuk waktu sholat berikutnya (pukul <strong x-text="item.jam_selesai"></strong>).</span>
+                </div>
+              </div>
+              <!-- Tombol laporan aktif -->
+              <div class="flex gap-2.5 flex-wrap">
+                <button @click="lapor(item.waktu, 'sholat')"
+                  class="flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition bg-white text-green-600 border-green-300 hover:bg-green-500 hover:text-white shadow-sm">
+                  ✅ Sholat
+                </button>
+                <button @click="lapor(item.waktu, 'tidak_sholat')"
+                  class="flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition bg-white text-red-600 border-red-300 hover:bg-red-500 hover:text-white shadow-sm">
+                  ❌ Tidak Sholat
+                </button>
+                <template x-if="item.boleh_haid">
+                  <button @click="lapor(item.waktu, 'haid')"
+                    class="flex-1 py-3 px-4 rounded-xl border-2 text-sm font-semibold transition bg-white text-purple-600 border-purple-300 hover:bg-purple-500 hover:text-white shadow-sm">
+                    🌙 Haid
+                  </button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- KONDISI 4: BELUM LAPOR DAN SUDAH LEWAT WAKTU -->
+          <template x-if="!item.sudah_lapor && item.window_status === 'lewat'">
+            <div>
+              <div class="mb-3 p-2.5 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-xs text-red-800">
+                <svg class="w-4 h-4 flex-shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span>Waktu pelaporan sudah berakhir (batas s/d pukul <strong x-text="item.jam_selesai"></strong>). Anda tidak dapat melaporkan sholat ini lagi.</span>
+              </div>
+              <div class="flex gap-2.5 opacity-30 cursor-not-allowed">
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">✅ Sholat</button>
+                <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">❌ Tidak Sholat</button>
+                <template x-if="item.boleh_haid">
+                  <button disabled class="flex-1 py-2.5 px-3 rounded-xl border border-gray-300 text-xs font-semibold bg-gray-100 text-gray-400">🌙 Haid</button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <template x-if="data && data.form && data.form.length === 0">
+    <div class="text-center py-16 text-gray-400 bg-white rounded-xl border border-gray-200">
+      <p class="text-5xl mb-4">🕌</p>
+      <p class="font-medium">Tidak ada waktu sholat yang perlu dilaporkan hari ini.</p>
+    </div>
+  </template>
+
+  <template x-if="!data">
+    <div class="text-center py-16 bg-white rounded-xl border border-gray-200">
+      <div class="spinner mx-auto mb-3"></div>
+      <p class="text-sm text-gray-500">Memuat form sholat hari ini...</p>
+    </div>
+  </template>
+</div>
+
+<script>
+function PageLapor() {
+  return {
+    data: null,
+    loading: false,
+
+    async init() {
+      if (window.app && window.app.laporData) {
+        this.data = window.app.laporData;
+      }
+      if (window.app) {
+        await window.app.loadLapor();
+      }
+    },
+
+    async refreshData() {
+      if (!window.app) return;
+      this.loading = true;
+      await window.app.loadLapor();
+      this.loading = false;
+    },
+
+    async lapor(waktu, status) {
+      if (!window.app) return;
+      await window.app.kirimLaporan(waktu, status);
+      if (window.app.laporData) {
+        this.data = window.app.laporData;
+      }
+    },
+
+    labelStatus(s) {
+      if (s === 'sholat')       return '✅ Sholat';
+      if (s === 'tidak_sholat') return '❌ Tidak Sholat';
+      if (s === 'haid')         return '🌙 Sedang Haid';
+      return '—';
+    },
+
+    formatTanggal(str) {
+      if (!str) return '';
+      const d = new Date(str);
+      return d.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    },
+
+    waktuDesc(w) {
+      const map = {
+        subuh:   'Mulai masuk Subuh s/d Dzuhur',
+        dzuhur:  'Mulai masuk Dzuhur s/d Ashar',
+        ashar:   'Mulai masuk Ashar s/d Maghrib',
+        maghrib: 'Mulai masuk Maghrib s/d Isya',
+        isya:    'Mulai masuk Isya s/d Subuh esok hari'
+      };
+      return map[w] || '';
+    }
+  };
+}
+</script>

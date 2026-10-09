@@ -1,0 +1,287 @@
+<!-- PageSetting.html — Setting Waktu Sholat & Kalender Hari -->
+<div x-data="PageSetting()" x-init="init()">
+
+  <h2 class="text-xl font-bold text-gray-800 mb-6">Setting Waktu Sholat & Lokasi</h2>
+
+  <div class="space-y-6">
+
+    <!-- ── CARD 1: LOKASI & JADWAL SHOLAT ── -->
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+      <div class="mb-4 border-b border-gray-100 pb-4">
+        <h3 class="font-bold text-gray-800 text-lg flex items-center gap-2">
+          <span>📍</span> Lokasi & Jadwal Waktu Sholat
+        </h3>
+        <p class="text-xs text-gray-500 mt-0.5">Pengaturan jam masuk waktu sholat sekolah.</p>
+      </div>
+
+      <!-- Info Lokasi Sekolah Terpilih -->
+      <div class="flex flex-wrap items-center gap-2 mb-5">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+          📍 Lokasi: <strong>KAB. KOTAWARINGIN TIMUR (Kalimantan Tengah)</strong>
+        </span>
+        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          🕒 Waktu Indonesia Barat (WIB / UTC+7)
+        </span>
+      </div>
+
+      <!-- Jam Waktu Sholat (manual) -->
+      <div class="bg-gray-50 border border-gray-200 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-gray-700">Jam Masuk Waktu Sholat:</span>
+          <span class="text-[11px] text-gray-500">Edit langsung, klik Simpan setelah selesai</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+            <div class="bg-white p-2.5 rounded-lg border border-gray-200 text-center">
+              <label class="block text-xs font-bold text-gray-600 uppercase mb-1" x-text="capitalize(w)"></label>
+              <input type="time" x-model="lokasi.jadwal[w]"
+                class="w-full text-center font-bold text-sm border border-gray-300 rounded px-1 py-1.5 focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CARD 2: PENGATURAN WAJIB LAPOR (HARI SEKOLAH & LIBUR) ── -->
+    <template x-for="tipe in ['hari_sekolah', 'hari_libur']" :key="tipe">
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <h3 class="font-bold text-gray-800 mb-1"
+          x-text="tipe === 'hari_sekolah' ? '🏫 Hari Sekolah' : '🏖️ Hari Libur'">
+        </h3>
+        <p class="text-sm text-gray-500 mb-4"
+          x-text="tipe === 'hari_sekolah' ?
+            'Senin–Jumat (jam belajar). Khusus hari Jumat, Ashar otomatis wajib dilaporkan.' :
+            'Sabtu–Minggu & tanggal libur khusus. Semua waktu dilaporkan.'">
+        </p>
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+            <div @click="toggleWaktu(tipe, w)"
+              class="w-full py-3 px-2 rounded-xl border-2 text-center text-sm font-medium transition cursor-pointer select-none"
+              :class="(setting && setting[tipe] && setting[tipe][w]) ?
+                'bg-green-500 text-white border-green-500 shadow-sm' :
+                'bg-gray-50 text-gray-400 border-gray-200 hover:border-gray-300'">
+              <div class="font-bold" x-text="capitalize(w)"></div>
+              <div class="text-xs mt-1" x-text="(setting && setting[tipe] && setting[tipe][w]) ? '✅ Wajib' : '❌ Tidak wajib'"></div>
+              <template x-if="tipe === 'hari_sekolah' && w === 'ashar' && !(setting && setting[tipe] && setting[tipe][w])">
+                <div class="text-[10px] text-amber-600 font-semibold mt-1">*(Jumat otomatis wajib)</div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- Tombol simpan semua setting -->
+    <div class="flex justify-end">
+      <button @click="simpanSetting()"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg text-sm font-semibold transition shadow-sm flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+        </svg>
+        <span>Simpan Semua Pengaturan</span>
+      </button>
+    </div>
+
+    <!-- Divider -->
+    <hr class="border-gray-200 my-8" />
+
+    <!-- ── CARD 3: KALENDER OVERRIDE ── -->
+    <div>
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-bold text-gray-800 text-lg">📅 Kalender Khusus</h3>
+          <p class="text-sm text-gray-500 mt-0.5">Override tipe hari untuk tanggal tertentu (libur kabut asap, ujian, dll).</p>
+        </div>
+        <button @click="openKalenderModal()"
+          class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Tambah Tanggal
+        </button>
+      </div>
+
+      <template x-if="kalenderList.length > 0">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600">Tanggal</th>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600">Tipe Hari</th>
+                <th class="text-left px-4 py-3 font-semibold text-gray-600">Keterangan</th>
+                <th class="text-center px-4 py-3 font-semibold text-gray-600">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="k in kalenderList" :key="k.tanggal">
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <td class="px-4 py-3 font-medium text-gray-800" x-text="window.app ? window.app.formatTanggal(k.tanggal) : k.tanggal"></td>
+                  <td class="px-4 py-3">
+                    <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                      :class="k.tipe_hari === 'hari_libur' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'"
+                      x-text="k.tipe_hari === 'hari_libur' ? '🏖️ Libur' : '🏫 Sekolah'">
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-gray-600" x-text="k.keterangan || '—'"></td>
+                  <td class="text-center px-4 py-3">
+                    <button @click="hapusKalenderItem(k.tanggal)"
+                      class="text-red-500 hover:text-red-700 text-xs font-medium">Hapus</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <template x-if="kalenderList.length === 0">
+        <div class="text-center py-10 text-gray-400 bg-white rounded-xl border border-gray-200">
+          Belum ada tanggal khusus ditentukan.
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Modal Tambah Kalender (dengan Rentang Tanggal) -->
+  <template x-if="showKalenderModal">
+    <div class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showKalenderModal=false">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden">
+        <div class="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+          <h3 class="font-bold text-lg text-gray-800">Tambah Tanggal Khusus</h3>
+          <button @click="showKalenderModal=false" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <form @submit.prevent="simpanKalender" class="p-6 space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Dari Tanggal *</label>
+              <input type="date" x-model="kalenderForm.tanggal_mulai" required
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Sampai Tanggal</label>
+              <input type="date" x-model="kalenderForm.tanggal_selesai" :min="kalenderForm.tanggal_mulai"
+                class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 -mt-2">Kosongkan "Sampai Tanggal" jika hanya 1 hari libur.</p>
+
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Hari *</label>
+            <select x-model="kalenderForm.tipe_hari" required
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="hari_libur">🏖️ Hari Libur</option>
+              <option value="hari_sekolah">🏫 Hari Sekolah</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+            <input type="text" x-model="kalenderForm.keterangan" placeholder="Contoh: Libur Kabut Asap, Libur Idul Fitri"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+          <div class="flex gap-3 pt-2">
+            <button type="button" @click="showKalenderModal=false"
+              class="flex-1 border border-gray-300 bg-white text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-100 transition">
+              Batal
+            </button>
+            <button type="submit"
+              class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium transition shadow-sm">
+              Simpan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageSetting() {
+  return {
+    setting: {
+      hari_sekolah: { subuh: true, dzuhur: false, ashar: false, maghrib: true, isya: true },
+      hari_libur:   { subuh: true, dzuhur: true,  ashar: true,  maghrib: true, isya: true }
+    },
+    lokasi: {
+      zona_waktu: 'WIB',
+      kota_id:    '2208',
+      nama_kota:  'KAB. KOTAWARINGIN TIMUR',
+      jadwal:     { subuh: '03:57', dzuhur: '11:19', ashar: '14:25', maghrib: '17:23', isya: '18:32' }
+    },
+    kalender: [],
+    showKalenderModal: false,
+    kalenderForm: { tanggal_mulai: '', tanggal_selesai: '', tipe_hari: 'hari_libur', keterangan: '' },
+
+    get kalenderList() {
+      return (window.app && window.app.kalenderData) ? window.app.kalenderData : this.kalender;
+    },
+
+    async init() {
+      if (window.app) {
+        await window.app.loadSetting();
+        if (window.app.settingData) {
+          if (window.app.settingData.hari_sekolah) this.setting.hari_sekolah = window.app.settingData.hari_sekolah;
+          if (window.app.settingData.hari_libur)   this.setting.hari_libur   = window.app.settingData.hari_libur;
+          if (window.app.settingData.lokasi) {
+            this.lokasi = { ...this.lokasi, ...window.app.settingData.lokasi, zona_waktu: 'WIB' };
+          }
+        }
+        if (window.app.kalenderData) {
+          this.kalender = window.app.kalenderData;
+        }
+      }
+    },
+
+    openKalenderModal() {
+      this.kalenderForm = { tanggal_mulai: '', tanggal_selesai: '', tipe_hari: 'hari_libur', keterangan: '' };
+      this.showKalenderModal = true;
+    },
+
+    toggleWaktu(tipe, w) {
+      if (!this.setting[tipe]) this.setting[tipe] = {};
+      this.setting[tipe][w] = !this.setting[tipe][w];
+    },
+
+    async simpanSetting() {
+      if (!window.app) return;
+      this.lokasi.zona_waktu = 'WIB';
+      const payload = {
+        hari_sekolah: this.setting.hari_sekolah,
+        hari_libur:   this.setting.hari_libur,
+        lokasi:       this.lokasi
+      };
+      const res = await window.app.api('updateSetting', payload);
+      window.app.showToast(res.msg || 'Pengaturan berhasil disimpan.', res.ok ? 'ok' : 'err');
+    },
+
+    async simpanKalender() {
+      if (!window.app) return;
+      const payload = {
+        tanggal_mulai:   this.kalenderForm.tanggal_mulai,
+        tanggal_selesai: this.kalenderForm.tanggal_selesai || this.kalenderForm.tanggal_mulai,
+        tipe_hari:       this.kalenderForm.tipe_hari,
+        keterangan:      this.kalenderForm.keterangan
+      };
+      const ok = await window.app.simpanKalender(payload);
+      if (ok) {
+        this.showKalenderModal = false;
+        this.kalender = window.app.kalenderData || [];
+      }
+    },
+
+    async hapusKalenderItem(tgl) {
+      if (!window.app) return;
+      await window.app.hapusKalender(tgl);
+      this.kalender = window.app.kalenderData || [];
+    },
+
+    capitalize(str) {
+      return str ? (str.charAt(0).toUpperCase() + str.slice(1)) : '';
+    }
+  };
+}
+</script>

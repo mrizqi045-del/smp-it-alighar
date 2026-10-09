@@ -1,0 +1,179 @@
+<!-- PageDashboardSiswa.html — Riwayat Sholat Minggu Ini -->
+<div x-data="PageDashSiswa()" 
+     @dashboard-siswa-updated.window="onDataUpdated($event.detail)"
+     x-init="init()"
+     x-effect="if (window.app && window.app.page === 'dashboard-siswa') { onPageActive(); }">
+
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-xl font-bold text-gray-800">Riwayat Sholat Saya</h2>
+    <div class="flex items-center gap-2">
+      <button @click="minggu--; load()" class="p-2 rounded-lg border hover:bg-gray-50">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <span class="text-sm font-medium text-gray-600 min-w-[140px] text-center"
+        x-text="rangeLabel || 'Memuat...'"></span>
+      <button @click="if(minggu<0){minggu++; load();}" :disabled="minggu===0"
+        class="p-2 rounded-lg border hover:bg-gray-50 disabled:opacity-40">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div x-show="loading || (!rekap && window.app && window.app.loading)" class="py-16 text-center text-gray-400 bg-white rounded-xl border border-gray-200 shadow-sm">
+    <div class="inline-block animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mb-3"></div>
+    <p class="text-sm font-medium">Memuat riwayat sholat minggu berjalan...</p>
+  </div>
+
+  <!-- Ringkasan -->
+  <template x-if="rekap && !loading">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div class="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-green-600" x-text="rekap.total_tepat !== undefined ? rekap.total_tepat : rekap.total_sholat"></div>
+        <div class="text-xs text-green-700 mt-1">✅ Tepat Waktu</div>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-amber-600" x-text="rekap.total_terlambat || 0"></div>
+        <div class="text-xs text-amber-700 mt-1">⚠️ Terlambat</div>
+      </div>
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-red-600" x-text="rekap.total_tidak"></div>
+        <div class="text-xs text-red-700 mt-1">❌ Tidak Sholat</div>
+      </div>
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600" x-text="rekap.persen + '%'"></div>
+        <div class="text-xs text-blue-700 mt-1">Kepatuhan</div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Tabel detail hari -->
+  <template x-if="rekap && rekap.detail.length > 0 && !loading">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th class="text-left px-4 py-3 font-semibold text-gray-600">Hari</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Subuh</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Dzuhur</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Ashar</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Maghrib</th>
+              <th class="text-center px-3 py-3 font-semibold text-gray-600">Isya</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="hari in rekap.detail" :key="hari.tanggal">
+              <tr class="border-b border-gray-100 hover:bg-gray-50">
+                <td class="px-4 py-3 font-medium text-gray-700 whitespace-nowrap"
+                  x-text="window.app ? window.app.formatTanggalPendek(hari.tanggal) : hari.tanggal"></td>
+                <template x-for="w in ['subuh','dzuhur','ashar','maghrib','isya']" :key="w">
+                  <td class="text-center px-3 py-3">
+                    <template x-if="hari.waktu[w] !== undefined">
+                      <div class="flex flex-col items-center gap-0.5">
+                        <span class="text-base leading-none" x-text="statusIcon(hari.waktu[w])"></span>
+                        <span class="text-[10px] font-mono leading-none"
+                          :class="{
+                            'text-green-600': getStatus(hari.waktu[w]) === 'sholat' && !isTerlambat(hari.waktu[w]),
+                            'text-amber-600 font-bold': getStatus(hari.waktu[w]) === 'sholat' && isTerlambat(hari.waktu[w]),
+                            'text-red-500':   getStatus(hari.waktu[w]) === 'tidak_sholat',
+                            'text-purple-600':getStatus(hari.waktu[w]) === 'haid',
+                            'text-gray-400':  getStatus(hari.waktu[w]) === 'belum'
+                          }"
+                          x-text="getJam(hari.waktu[w])">
+                        </span>
+                        <template x-if="isTerlambat(hari.waktu[w])">
+                          <span class="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1 rounded leading-tight mt-0.5">Terlambat</span>
+                        </template>
+                      </div>
+                    </template>
+                    <template x-if="hari.waktu[w] === undefined">
+                      <span class="text-gray-200 text-xs">·</span>
+                    </template>
+                  </td>
+                </template>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+</div>
+
+<script>
+function PageDashSiswa() {
+  return {
+    minggu: 0,
+    rekap:  null,
+    rangeLabel: '',
+    loading: false,
+
+    async init() {
+      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa') {
+        this.onDataUpdated(window.app.dashboardData);
+      }
+      if (window.app && window.app.token) {
+        await this.load();
+      }
+    },
+
+    onPageActive() {
+      // Dipanggil otomatis tiap kali halaman ini dibuka
+      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa' && !this.rekap) {
+        this.onDataUpdated(window.app.dashboardData);
+      } else if (!this.rekap && !this.loading && window.app && window.app.token) {
+        this.load();
+      }
+    },
+
+    onDataUpdated(res) {
+      if (!res) return;
+      this.rekap      = res.rekap || null;
+      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+    },
+
+    async load() {
+      if (!window.app || !window.app.token) return;
+      this.loading = true;
+      const res = await window.app.api('getDashboard', { minggu: this.minggu });
+      this.loading = false;
+      if (res.ok) {
+        this.onDataUpdated(res);
+      } else {
+        window.app.showToast(res.msg, 'err');
+      }
+    },
+
+    getStatus(s) {
+      if (!s) return 'belum';
+      return (typeof s === 'object') ? (s.status || 'belum') : s;
+    },
+
+    getJam(s) {
+      if (!s || typeof s !== 'object') return '—';
+      return s.jam || '—';
+    },
+
+    isTerlambat(s) {
+      if (!s || typeof s !== 'object') return false;
+      return Boolean(s.terlambat);
+    },
+
+    statusIcon(s) {
+      const v = this.getStatus(s);
+      if (v === 'sholat') {
+        return this.isTerlambat(s) ? '⚠️' : '✅';
+      }
+      if (v === 'tidak_sholat') return '❌';
+      if (v === 'haid')         return '🌙';
+      return '—';
+    }
+  };
+}
+</script>

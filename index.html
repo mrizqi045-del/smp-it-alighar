@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="id" x-data="App()" x-init="init()">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMP ISLAM TERPADU ALIGHAR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .fade-in { animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+    .spinner { border:3px solid #e5e7eb; border-top-color:#1a73e8; border-radius:50%; width:24px; height:24px; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    /* Waktu sholat card aktif */
+    .sholat-btn-sholat    { @apply bg-green-500 text-white border-green-500; }
+    .sholat-btn-tidak     { @apply bg-red-500 text-white border-red-500; }
+    .sholat-btn-haid      { @apply bg-purple-500 text-white border-purple-500; }
+    .sholat-btn-belum     { @apply bg-gray-100 text-gray-500 border-gray-300; }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800">
+
+<!-- ═══════════════════════════════════════════════════════════
+     TOAST NOTIFICATION
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="toast.show" x-transition
+  class="fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-white text-sm max-w-xs"
+  :class="toast.type==='ok' ? 'bg-green-600' : 'bg-red-600'"
+  @click="toast.show=false">
+  <span x-text="toast.msg"></span>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LOADING OVERLAY
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="loading" class="fixed inset-0 bg-white/80 z-40 flex items-center justify-center">
+  <div class="spinner"></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HALAMAN LOGIN
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="page==='login'" class="min-h-screen flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm fade-in">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800">SMP ISLAM TERPADU ALIGHAR</h1>
+    </div>
+    <form @submit.prevent="doLogin">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+        <input type="text" x-model="loginForm.username" required autocomplete="username"
+          class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Masukkan username" />
+      </div>
+      <div class="mb-6 relative">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <input :type="showPass ? 'text' : 'password'" x-model="loginForm.password" required autocomplete="current-password"
+          class="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
+          placeholder="Masukkan password" />
+        <button type="button" @click="showPass=!showPass"
+          class="absolute right-3 top-9 text-gray-400 hover:text-gray-600">
+          <svg x-show="!showPass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          <svg x-show="showPass" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 4.411m0 0L21 21"/>
+          </svg>
+        </button>
+      </div>
+      <button type="submit"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition text-sm">
+        Masuk
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     LAYOUT UTAMA (setelah login)
+═══════════════════════════════════════════════════════════════ -->
+<div x-cloak x-show="page!=='login'" class="flex flex-col min-h-screen">
+
+  <!-- ── TOP NAV ──────────────────────────────────────────── -->
+  <nav class="bg-blue-700 text-white shadow-md sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <!-- Mobile hamburger -->
+        <button @click="sidebarOpen=!sidebarOpen" class="lg:hidden text-white">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        <span class="font-bold text-lg">SMP ISLAM TERPADU ALIGHAR</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-sm hidden sm:block" x-text="user.nama"></span>
+        <span class="text-xs bg-blue-500 px-2 py-0.5 rounded-full" x-text="labelRole(user.role)"></span>
+        <button @click="doLogout" class="text-sm bg-blue-800 hover:bg-blue-900 px-3 py-1.5 rounded-lg transition">
+          Keluar
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="flex flex-1 max-w-6xl mx-auto w-full">
+
+    <!-- ── SIDEBAR ──────────────────────────────────────────── -->
+    <aside class="bg-white border-r border-gray-200 w-56 flex-shrink-0 hidden lg:block">
+      <nav class="p-4 space-y-1">
+        <template x-for="item in navItems()" :key="item.page">
+          <button @click="navigate(item.page)"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"
+            :class="page===item.page ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
+            <span x-html="item.icon" class="w-5 h-5 flex-shrink-0"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+    </aside>
+
+    <!-- Mobile sidebar overlay -->
+    <div x-cloak x-show="sidebarOpen" @click="sidebarOpen=false"
+      class="fixed inset-0 bg-black/40 z-20 lg:hidden"></div>
+    <aside x-cloak x-show="sidebarOpen" class="fixed left-0 top-0 h-full w-56 bg-white shadow-xl z-30 lg:hidden pt-16">
+      <nav class="p-4 space-y-1">
+        <template x-for="item in navItems()" :key="item.page">
+          <button @click="navigate(item.page); sidebarOpen=false"
+            class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition"
+            :class="page===item.page ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-600 hover:bg-gray-50'">
+            <span x-html="item.icon" class="w-5 h-5 flex-shrink-0"></span>
+            <span x-text="item.label"></span>
+          </button>
+        </template>
+      </nav>
+    </aside>
+
+    <!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+    <main class="flex-1 p-4 sm:p-6 overflow-auto">
+
+      <!-- ── DASHBOARD SISWA ─────────────────────────────────── -->
+      <div x-cloak x-show="page==='dashboard-siswa'" class="fade-in">
+        <?!= include('PageDashboardSiswa'); ?>
+      </div>
+
+      <!-- ── LAPOR SHOLAT ────────────────────────────────────── -->
+      <div x-cloak x-show="page==='lapor'" class="fade-in">
+        <?!= include('PageLapor'); ?>
+      </div>
+
+      <!-- ── DASHBOARD WALIKELAS ─────────────────────────────── -->
+      <div x-cloak x-show="page==='dashboard-walikelas'" class="fade-in">
+        <?!= include('PageDashboardWalikelas'); ?>
+      </div>
+
+      <!-- ── DASHBOARD ADMIN ────────────────────────────────── -->
+      <div x-cloak x-show="page==='dashboard-admin'" class="fade-in">
+        <?!= include('PageDashboardAdmin'); ?>
+      </div>
+
+      <!-- ── USER MANAGEMENT ────────────────────────────────── -->
+      <div x-cloak x-show="page==='users'" class="fade-in">
+        <?!= include('PageUsers'); ?>
+      </div>
+
+      <!-- ── KELAS MANAGEMENT ───────────────────────────────── -->
+      <div x-cloak x-show="page==='kelas'" class="fade-in">
+        <?!= include('PageKelas'); ?>
+      </div>
+
+      <!-- ── SETTING SHOLAT ─────────────────────────────────── -->
+      <div x-cloak x-show="page==='setting'" class="fade-in">
+        <?!= include('PageSetting'); ?>
+      </div>
+
+      <!-- ── GANTI PASSWORD ─────────────────────────────────── -->
+      <div x-cloak x-show="page==='ganti-password'" class="fade-in">
+        <?!= include('PageGantiPassword'); ?>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     ALPINE.JS APP STATE
+═══════════════════════════════════════════════════════════════ -->
+<script>
+const APP_URL = '<?= ScriptApp.getService().getUrl() ?>';
+
+function App() {
+  return {
+    // ── State ───────────────────────────────────────────────
+    page:        'login',
+    loading:     false,
+    sidebarOpen: false,
+    showPass:    false,
+    user:        {},
+    token:       null,
+    toast:       { show: false, msg: '', type: 'ok' },
+
+    // ── Forms ───────────────────────────────────────────────
+    loginForm: { username: '', password: '' },
+
+    // ── Data state (diisi oleh masing-masing page) ──────────
+    dashboardData:  null,
+    laporData:      null,
+    usersData:      [],
+    kelasData:      [],
+    settingData:    null,
+    kalenderData:   [],
+
+    // ── Init ───────────────────────────────────────────────
+    init() {
+      window.app = this;
+      // Cek session tersimpan
+      const saved = sessionStorage.getItem('smp_session');
+      if (saved) {
+        try {
+          const sess = JSON.parse(saved);
+          this.user  = sess.user;
+          this.token = sess.token;
+          this.goHome();
+        } catch(e) {
+          sessionStorage.removeItem('smp_session');
+        }
+      }
+    },
+
+    // ── Navigasi ────────────────────────────────────────────
+    navigate(p) {
+      this.page = p;
+      this.$nextTick(() => {
+        if (p === 'lapor')               this.loadLapor();
+        if (p === 'dashboard-siswa')     this.loadDashboard();
+        if (p === 'dashboard-walikelas') this.loadDashboardWalikelas();
+        if (p === 'dashboard-admin')     this.loadDashboardAdmin();
+        if (p === 'users')               this.loadUsers();
+        if (p === 'kelas')               this.loadKelas();
+        if (p === 'setting')             this.loadSetting();
+      });
+    },
+
+    goHome() {
+      const role = this.user.role;
+      if (role === 'siswa')                      this.navigate('lapor');
+      else if (role === 'walikelas')             this.navigate('dashboard-walikelas');
+      else if (role === 'kepala_sekolah')        this.navigate('dashboard-admin');
+      else                                       this.navigate('dashboard-admin');
+    },
+
+    navItems() {
+      const role = this.user.role;
+      const iconHome    = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>`;
+      const iconSholat  = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>`;
+      const iconUsers   = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`;
+      const iconKelas   = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>`;
+      const iconSetting = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`;
+      const iconPass    = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>`;
+
+      const items = [];
+
+      if (role === 'siswa') {
+        items.push({ page: 'lapor',            label: 'Lapor Sholat',  icon: iconSholat });
+        items.push({ page: 'dashboard-siswa',  label: 'Riwayat Saya', icon: iconHome });
+      }
+      if (role === 'walikelas') {
+        items.push({ page: 'dashboard-walikelas', label: 'Rekap Kelas', icon: iconHome });
+      }
+      if (['superadmin','admin','kepala_sekolah'].includes(role)) {
+        items.push({ page: 'dashboard-admin', label: 'Dashboard',   icon: iconHome });
+      }
+      if (['superadmin','admin'].includes(role)) {
+        items.push({ page: 'users',   label: 'Kelola User',   icon: iconUsers });
+        items.push({ page: 'kelas',   label: 'Kelola Kelas',  icon: iconKelas });
+        items.push({ page: 'setting', label: 'Setting Sholat',icon: iconSetting });
+      }
+      items.push({ page: 'ganti-password', label: 'Ganti Password', icon: iconPass });
+
+      return items;
+    },
+
+    labelRole(r) {
+      const map = {
+        superadmin:    'Super Admin',
+        admin:         'Admin',
+        kepala_sekolah:'Kepala Sekolah',
+        walikelas:     'Wali Kelas',
+        siswa:         'Siswa'
+      };
+      return map[r] || r;
+    },
+
+    // ── Auth ────────────────────────────────────────────────
+    async doLogin() {
+      const res = await this.api('login', this.loginForm);
+      if (res.ok) {
+        this.user  = res.user;
+        this.token = res.token;
+        sessionStorage.setItem('smp_session', JSON.stringify({ user: res.user, token: res.token }));
+        this.loginForm = { username: '', password: '' };
+        this.goHome();
+        this.showToast('Selamat datang, ' + res.user.nama + '!', 'ok');
+      } else {
+        this.showToast(res.msg || 'Login gagal', 'err');
+      }
+    },
+
+    doLogout() {
+      sessionStorage.removeItem('smp_session');
+      this.user  = {};
+      this.token = null;
+      this.page  = 'login';
+    },
+
+    // ── API Helper: google.script.run dengan Timeout 30 detik & Auto-Logout ──
+    async api(action, data = {}) {
+      this.loading = true;
+      const payloadStr = JSON.stringify({ action, token: this.token, data });
+
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          this.loading = false;
+          this.showToast('Koneksi timeout (30s). Silakan coba lagi.', 'err');
+          resolve({ ok: false, msg: 'Koneksi timeout.' });
+        }, 30000);
+
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler((result) => {
+              clearTimeout(timer);
+              this.loading = false;
+              // Jika server mengembalikan sesi habis, logout otomatis dan arahkan ke login
+              if (result && !result.ok && result.msg && (result.msg.includes('Sesi habis') || result.msg.includes('Silakan login ulang'))) {
+                this.doLogout();
+                this.showToast(result.msg, 'err');
+                resolve(result);
+                return;
+              }
+              resolve(result || { ok: false, msg: 'Respon server kosong.' });
+            })
+            .withFailureHandler((err) => {
+              clearTimeout(timer);
+              this.loading = false;
+              const msg = (err && err.message) ? err.message : 'Terjadi kesalahan pada server Google Apps Script.';
+              this.showToast(msg, 'err');
+              resolve({ ok: false, msg: msg });
+            })
+            .handleRequest(payloadStr);
+        } else {
+          clearTimeout(timer);
+          this.loading = false;
+          this.showToast('google.script.run tidak terdeteksi.', 'err');
+          resolve({ ok: false, msg: 'google.script.run tidak terdeteksi' });
+        }
+      });
+    },
+
+    showToast(msg, type = 'ok') {
+      this.toast = { show: true, msg, type };
+      setTimeout(() => { this.toast.show = false; }, 3500);
+    },
+
+    // ── Load Functions ──────────────────────────────────────
+    async loadLapor() {
+      const res = await this.api('getFormHariIni');
+      if (res.ok) {
+        this.laporData = res.data;
+        window.dispatchEvent(new CustomEvent('lapor-updated', { detail: res.data }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadDashboard(minggu = 0) {
+      const res = await this.api('getDashboard', { minggu });
+      if (res.ok) {
+        this.dashboardData = res;
+        window.dispatchEvent(new CustomEvent('dashboard-siswa-updated', { detail: res }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadDashboardWalikelas(minggu = 0) {
+      const res = await this.api('getDashboard', { minggu });
+      if (res.ok) {
+        this.dashboardData = res;
+        window.dispatchEvent(new CustomEvent('dashboard-walikelas-updated', { detail: res }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadDashboardAdmin(minggu = 0) {
+      const res = await this.api('getDashboard', { minggu });
+      if (res.ok) {
+        this.dashboardData = res;
+        window.dispatchEvent(new CustomEvent('dashboard-admin-updated', { detail: res }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadUsers() {
+      const res = await this.api('getUsers');
+      if (res.ok) {
+        this.usersData = res.data || [];
+        window.dispatchEvent(new CustomEvent('users-updated', { detail: this.usersData }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadKelas() {
+      const res = await this.api('getKelas');
+      if (res.ok) {
+        this.kelasData = res.data || [];
+        window.dispatchEvent(new CustomEvent('kelas-updated', { detail: this.kelasData }));
+      } else {
+        this.showToast(res.msg, 'err');
+      }
+    },
+
+    async loadSetting() {
+      const [sRes, kRes] = await Promise.all([
+        this.api('getSetting'),
+        this.api('getKalender')
+      ]);
+      if (sRes.ok) this.settingData  = sRes.data;
+      if (kRes.ok) this.kalenderData = kRes.data || [];
+      window.dispatchEvent(new CustomEvent('setting-updated', {
+        detail: { setting: this.settingData, kalender: this.kalenderData }
+      }));
+    },
+
+    // ── Lapor Sholat ────────────────────────────────────────
+    async kirimLaporan(waktu, status) {
+      const res = await this.api('laporSholat', { waktu_sholat: waktu, status });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadLapor();
+    },
+
+    // ── User CRUD ───────────────────────────────────────────
+    async simpanUser(data) {
+      const action = data.id ? 'updateUser' : 'createUser';
+      const res = await this.api(action, data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadUsers();
+      return res.ok;
+    },
+
+    async resetPasswordUser(userId, passwordBaru) {
+      const res = await this.api('resetPassword', { id: userId, password_baru: passwordBaru });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      return res.ok;
+    },
+
+    async hapusUser(userId) {
+      if (!confirm('Yakin ingin menghapus user ini?')) return false;
+      const res = await this.api('deleteUser', { id: userId });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadUsers();
+      return res.ok;
+    },
+
+    // ── Kelas CRUD ──────────────────────────────────────────
+    async simpanKelas(data) {
+      const action = data.id ? 'updateKelas' : 'createKelas';
+      const res = await this.api(action, data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadKelas();
+      return res.ok;
+    },
+
+    async hapusKelas(id) {
+      if (!confirm('Hapus kelas ini?')) return;
+      const res = await this.api('deleteKelas', { id });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadKelas();
+    },
+
+    // ── Setting ─────────────────────────────────────────────
+    async simpanSetting() {
+      const res = await this.api('updateSetting', this.settingData);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+    },
+
+    async simpanKalender(data) {
+      const res = await this.api('saveKalender', data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadSetting();
+      return res.ok;
+    },
+
+    async hapusKalender(tanggal) {
+      if (!confirm('Hapus tanggal ini dari kalender?')) return;
+      const res = await this.api('deleteKalender', { tanggal });
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      if (res.ok) await this.loadSetting();
+    },
+
+    // ── Ganti Password ──────────────────────────────────────
+    async gantiPassword(data) {
+      const res = await this.api('gantiPassword', data);
+      this.showToast(res.msg, res.ok ? 'ok' : 'err');
+      return res.ok;
+    },
+
+    // ── Utils ───────────────────────────────────────────────
+    labelStatus(s) {
+      if (s === 'sholat')      return '✅ Sholat';
+      if (s === 'tidak_sholat') return '❌ Tidak';
+      if (s === 'haid')        return '🌙 Haid';
+      return '—';
+    },
+
+    colorStatus(s) {
+      if (s === 'sholat')       return 'text-green-600 font-semibold';
+      if (s === 'tidak_sholat') return 'text-red-600 font-semibold';
+      if (s === 'haid')         return 'text-purple-600 font-semibold';
+      return 'text-gray-400';
+    },
+
+    formatTanggal(str) {
+      if (!str) return '';
+      const d = new Date(str);
+      return d.toLocaleDateString('id-ID', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    },
+
+    formatTanggalPendek(str) {
+      if (!str) return '';
+      const d = new Date(str);
+      return d.toLocaleDateString('id-ID', { weekday:'short', day:'numeric', month:'short' });
+    }
+  };
+}
+</script>
+
+</body>
+</html>
