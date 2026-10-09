@@ -68,17 +68,16 @@ CREATE TABLE IF NOT EXISTS kalender_hari (
 -- ============================================================
 
 -- Default Akun Superadmin: username 'superadmin', password 'admin123'
--- Hash bcrypt '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy' = admin123
 INSERT INTO users (username, password_hash, role, nama_lengkap, jenis_kelamin, is_active)
 VALUES (
     'superadmin',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+    'admin123',
     'superadmin',
     'Super Admin',
     'L',
     TRUE
 )
-ON CONFLICT (username) DO NOTHING;
+ON CONFLICT (username) DO UPDATE SET password_hash = 'admin123';
 
 -- Default Setting Sholat Hari Sekolah (Senin-Jumat, Dzuhur & Ashar default false, Jumat otomatis wajib di backend)
 INSERT INTO setting_sholat (tipe_hari, waktu_sholat, wajib_lapor) VALUES
