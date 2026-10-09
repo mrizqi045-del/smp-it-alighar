@@ -1,8 +1,7 @@
 <!-- PageDashboardAdmin.html — Dashboard Semua Kelas (Admin/Kepsek/Superadmin) -->
 <div x-data="PageDashAdmin()" 
      @dashboard-admin-updated.window="onDataUpdated($event.detail)"
-     x-init="init()"
-     x-effect="if (window.app && window.app.page === 'dashboard-admin') { onPageActive(); }">
+     x-init="init()">
 
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <h2 class="text-xl font-bold text-gray-800">Dashboard Kepatuhan Sholat</h2>
@@ -244,36 +243,32 @@ function PageDashAdmin() {
     kelasList: [],
     detailKelas: null,
     detailSiswa: null,
+    loadingData: false,
 
     async init() {
       if (window.app && window.app.dashboardData && ['superadmin','admin','kepala_sekolah'].includes(window.app.dashboardData.role)) {
         this.onDataUpdated(window.app.dashboardData);
-      }
-      if (window.app && window.app.token) {
+      } else if (window.app && window.app.token) {
         await this.load();
-      }
-    },
-
-    onPageActive() {
-      if (window.app && window.app.dashboardData && ['superadmin','admin','kepala_sekolah'].includes(window.app.dashboardData.role) && this.kelasList.length === 0) {
-        this.onDataUpdated(window.app.dashboardData);
-      } else if (this.kelasList.length === 0 && window.app && window.app.token) {
-        this.load();
       }
     },
 
     onDataUpdated(res) {
       if (!res) return;
-      this.kelasList  = res.kelas || [];
-      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+      const data = res.data || res;
+      this.kelasList  = data.kelas || res.kelas || [];
+      const r = data.range || res.range;
+      this.rangeLabel = r ? (r.start + ' s/d ' + r.end) : '';
     },
 
     async load() {
-      if (!window.app || !window.app.token) return;
+      if (!window.app || !window.app.token || this.loadingData) return;
+      this.loadingData = true;
       const res = await window.app.api('getDashboard', { minggu: this.minggu });
-      if (res.ok) {
+      this.loadingData = false;
+      if (res && res.ok) {
         this.onDataUpdated(res);
-      } else {
+      } else if (res && res.msg) {
         window.app.showToast(res.msg, 'err');
       }
     },

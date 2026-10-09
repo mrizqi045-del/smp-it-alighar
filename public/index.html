@@ -150,8 +150,7 @@
         <!-- PageDashboardSiswa.html — Riwayat Sholat Minggu Ini -->
 <div x-data="PageDashSiswa()" 
      @dashboard-siswa-updated.window="onDataUpdated($event.detail)"
-     x-init="init()"
-     x-effect="if (window.app && window.app.page === 'dashboard-siswa') { onPageActive(); }">
+     x-init="init()">
 
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-xl font-bold text-gray-800">Riwayat Sholat Saya</h2>
@@ -266,25 +265,17 @@ function PageDashSiswa() {
     async init() {
       if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa') {
         this.onDataUpdated(window.app.dashboardData);
-      }
-      if (window.app && window.app.token) {
+      } else if (window.app && window.app.token) {
         await this.load();
-      }
-    },
-
-    onPageActive() {
-      // Dipanggil otomatis tiap kali halaman ini dibuka
-      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa' && !this.rekap) {
-        this.onDataUpdated(window.app.dashboardData);
-      } else if (!this.rekap && !this.loading && window.app && window.app.token) {
-        this.load();
       }
     },
 
     onDataUpdated(res) {
       if (!res) return;
-      this.rekap      = res.rekap || null;
-      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+      const data = res.data || res;
+      this.rekap      = data.rekap || res.rekap || null;
+      const r = data.range || res.range;
+      this.rangeLabel = r ? (r.start + ' s/d ' + r.end) : '';
     },
 
     async load() {
@@ -564,8 +555,7 @@ function PageLapor() {
         <!-- PageDashboardWalikelas.html — Rekap Mingguan Kelas -->
 <div x-data="PageDashWalikelas()" 
      @dashboard-walikelas-updated.window="onDataUpdated($event.detail)"
-     x-init="init()"
-     x-effect="if (window.app && window.app.page === 'dashboard-walikelas') { onPageActive(); }">
+     x-init="init()">
 
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <div>
@@ -750,37 +740,37 @@ function PageDashWalikelas() {
     summary: null,
     detailSiswa: null,
 
+    loadingData: false,
+
     async init() {
       if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'walikelas') {
         this.onDataUpdated(window.app.dashboardData);
-      }
-      if (window.app && window.app.token) {
+      } else if (window.app && window.app.token) {
         await this.load();
-      }
-    },
-
-    onPageActive() {
-      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'walikelas' && this.siswaList.length === 0) {
-        this.onDataUpdated(window.app.dashboardData);
-      } else if (this.siswaList.length === 0 && window.app && window.app.token) {
-        this.load();
       }
     },
 
     onDataUpdated(res) {
       if (!res) return;
-      this.namaKelas  = res.kelas ? res.kelas.nama_kelas : '';
-      this.siswaList  = res.siswa || [];
-      this.summary    = res.summary || null;
-      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+      const data = res.data || res;
+      this.namaKelas  = data.kelas ? ('Kelas ' + data.kelas.nama_kelas) : '';
+      this.siswaList  = data.siswa || res.siswa || [];
+      this.summary    = data.summary || res.summary || null;
+      const r = data.range || res.range;
+      this.rangeLabel = r ? (r.start + ' s/d ' + r.end) : '';
     },
 
     async load() {
-      if (!window.app || !window.app.token) return;
+      if (!window.app || !window.app.token || this.loadingData) return;
+      this.loadingData = true;
       const res = await window.app.api('getDashboard', { minggu: this.minggu });
-      if (res.ok) {
+      this.loadingData = false;
+      if (res && res.ok) {
         this.onDataUpdated(res);
-      } else {
+      } else if (res && res.msg) {
+        window.app.showToast(res.msg, 'err');
+      }
+    },
         window.app.showToast(res.msg, 'err');
       }
     },
@@ -808,8 +798,7 @@ function PageDashWalikelas() {
         <!-- PageDashboardAdmin.html — Dashboard Semua Kelas (Admin/Kepsek/Superadmin) -->
 <div x-data="PageDashAdmin()" 
      @dashboard-admin-updated.window="onDataUpdated($event.detail)"
-     x-init="init()"
-     x-effect="if (window.app && window.app.page === 'dashboard-admin') { onPageActive(); }">
+     x-init="init()">
 
   <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
     <h2 class="text-xl font-bold text-gray-800">Dashboard Kepatuhan Sholat</h2>
@@ -1051,36 +1040,32 @@ function PageDashAdmin() {
     kelasList: [],
     detailKelas: null,
     detailSiswa: null,
+    loadingData: false,
 
     async init() {
       if (window.app && window.app.dashboardData && ['superadmin','admin','kepala_sekolah'].includes(window.app.dashboardData.role)) {
         this.onDataUpdated(window.app.dashboardData);
-      }
-      if (window.app && window.app.token) {
+      } else if (window.app && window.app.token) {
         await this.load();
-      }
-    },
-
-    onPageActive() {
-      if (window.app && window.app.dashboardData && ['superadmin','admin','kepala_sekolah'].includes(window.app.dashboardData.role) && this.kelasList.length === 0) {
-        this.onDataUpdated(window.app.dashboardData);
-      } else if (this.kelasList.length === 0 && window.app && window.app.token) {
-        this.load();
       }
     },
 
     onDataUpdated(res) {
       if (!res) return;
-      this.kelasList  = res.kelas || [];
-      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+      const data = res.data || res;
+      this.kelasList  = data.kelas || res.kelas || [];
+      const r = data.range || res.range;
+      this.rangeLabel = r ? (r.start + ' s/d ' + r.end) : '';
     },
 
     async load() {
-      if (!window.app || !window.app.token) return;
+      if (!window.app || !window.app.token || this.loadingData) return;
+      this.loadingData = true;
       const res = await window.app.api('getDashboard', { minggu: this.minggu });
-      if (res.ok) {
+      this.loadingData = false;
+      if (res && res.ok) {
         this.onDataUpdated(res);
-      } else {
+      } else if (res && res.msg) {
         window.app.showToast(res.msg, 'err');
       }
     },

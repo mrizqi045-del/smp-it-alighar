@@ -1,8 +1,7 @@
 <!-- PageDashboardSiswa.html — Riwayat Sholat Minggu Ini -->
 <div x-data="PageDashSiswa()" 
      @dashboard-siswa-updated.window="onDataUpdated($event.detail)"
-     x-init="init()"
-     x-effect="if (window.app && window.app.page === 'dashboard-siswa') { onPageActive(); }">
+     x-init="init()">
 
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-xl font-bold text-gray-800">Riwayat Sholat Saya</h2>
@@ -117,25 +116,17 @@ function PageDashSiswa() {
     async init() {
       if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa') {
         this.onDataUpdated(window.app.dashboardData);
-      }
-      if (window.app && window.app.token) {
+      } else if (window.app && window.app.token) {
         await this.load();
-      }
-    },
-
-    onPageActive() {
-      // Dipanggil otomatis tiap kali halaman ini dibuka
-      if (window.app && window.app.dashboardData && window.app.dashboardData.role === 'siswa' && !this.rekap) {
-        this.onDataUpdated(window.app.dashboardData);
-      } else if (!this.rekap && !this.loading && window.app && window.app.token) {
-        this.load();
       }
     },
 
     onDataUpdated(res) {
       if (!res) return;
-      this.rekap      = res.rekap || null;
-      this.rangeLabel = res.range ? (res.range.start + ' s/d ' + res.range.end) : '';
+      const data = res.data || res;
+      this.rekap      = data.rekap || res.rekap || null;
+      const r = data.range || res.range;
+      this.rangeLabel = r ? (r.start + ' s/d ' + r.end) : '';
     },
 
     async load() {
