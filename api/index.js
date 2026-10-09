@@ -25,7 +25,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, app: 'SMP ISLAM TERPADU ALIGHAR', timestamp: new Date().toISOString() });
+  res.json({ ok: true, app: 'SMP ISLAM TERPADU ALIGARH', timestamp: new Date().toISOString() });
 });
 
 // Central Action Dispatcher
